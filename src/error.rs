@@ -1,5 +1,6 @@
 use thiserror_no_std::Error;
 
+/// Errors that can happen during handshake operations
 #[derive(Debug, Error)]
 pub enum HandshakeError {
     #[error("Missing key material for selected pattern")]
@@ -22,6 +23,7 @@ pub enum HandshakeError {
 
 pub type HandshakeResult<T> = Result<T, HandshakeError>;
 
+/// Errors that can happen during transport operations
 #[derive(Debug, Error)]
 pub enum TransportError {
     #[error("Provided buffer too small for given message")]
@@ -32,6 +34,7 @@ pub enum TransportError {
 
 pub type TransportResult<T> = Result<T, TransportError>;
 
+/// Errors that can happen during KEM operations
 #[derive(Debug, Error)]
 pub enum KemError {
     #[error("Invalid input")]
@@ -46,6 +49,7 @@ pub enum KemError {
 
 pub type KemResult<T> = Result<T, KemError>;
 
+// Errors that can happen during DH operations
 #[derive(Debug, Error)]
 pub enum DhError {
     #[error("Error generating keys")]
@@ -54,6 +58,7 @@ pub enum DhError {
 
 pub type DhResult<T> = Result<T, DhError>;
 
+/// Errors that can happen during Cipher operations
 #[derive(Debug, Error)]
 pub enum CipherError {
     #[error("Nonce overflow")]

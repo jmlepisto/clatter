@@ -108,18 +108,18 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-mod bytearray;
-mod cipherstate;
-mod constants;
+pub mod bytearray;
+pub mod cipherstate;
+pub mod constants;
 mod crypto_impl;
-mod error;
+pub mod error;
 pub mod handshakepattern;
 mod handshakestate;
 mod symmetricstate;
 #[cfg(test)]
 mod test;
 pub mod traits;
-mod transportstate;
+pub mod transportstate;
 
 pub use handshakestate::dual_layer::DualLayerHandshake;
 pub use handshakestate::nq::NqHandshake;

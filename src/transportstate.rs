@@ -4,9 +4,10 @@ use crate::constants::MAX_MESSAGE_LEN;
 use crate::error::{HandshakeError, HandshakeResult, TransportError, TransportResult};
 use crate::traits::{Cipher, Handshaker, Hash};
 
-/// Transport state after a successful handshake
+/// Transport state used after a successful handshake
 ///
-/// Contains session keys for secure communication
+/// Contains session keys for secure communication in the
+/// [`CipherStates`] struct.
 pub struct TransportState<C: Cipher, H: Hash> {
     cipherstates: CipherStates<C>,
     h: H::Output,
@@ -15,7 +16,7 @@ pub struct TransportState<C: Cipher, H: Hash> {
 
 impl<C: Cipher, H: Hash> TransportState<C, H> {
     /// Consume a [`Handshaker`] to initialize a new transport state
-    pub(crate) fn new<Hs: Handshaker<C, H>>(hs: Hs) -> HandshakeResult<TransportState<C, H>> {
+    pub fn new<Hs: Handshaker<C, H>>(hs: Hs) -> HandshakeResult<TransportState<C, H>> {
         if !hs.is_finished() {
             return Err(HandshakeError::InvalidState);
         }

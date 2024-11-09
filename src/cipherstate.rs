@@ -10,6 +10,7 @@ pub struct CipherStates<C: Cipher> {
     pub responder_to_initiator: CipherState<C>,
 }
 
+/// Cipherstate for encrypting and decrypting messages
 #[derive(ZeroizeOnDrop, Zeroize)]
 pub struct CipherState<C: Cipher> {
     k: C::Key,
@@ -28,7 +29,7 @@ impl<C: Cipher> CipherState<C> {
     ///
     /// # Panics
     /// Panics if key data has incorrect length
-    pub(crate) fn new(k: &[u8], n: u64) -> Self {
+    pub fn new(k: &[u8], n: u64) -> Self {
         Self {
             k: C::Key::from_slice(k),
             n,
