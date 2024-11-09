@@ -1,0 +1,3 @@
+//! Tests
+
+mod smoke;

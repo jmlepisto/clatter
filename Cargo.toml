@@ -1,0 +1,72 @@
+[package]
+name = "clatter"
+version = "0.1.0-alpha"
+edition = "2021"
+license = "MIT"
+description = "no_std compatible implementation of Noise protocol framework with Post-Quantum extensions"
+documentation = "https://docs.rs/clatter"
+repository = "https://github.com/jmlepisto/clatter"
+
+keywords = [
+    "noise",
+    "crypto",
+    "protocol",
+    "post-quantum",
+]
+
+categories = [
+    "cryptography",
+    "no-std",
+    "no-std::no-alloc",
+    "algorithms",
+]
+
+[features]
+default = [
+    "use-aes-gcm", 
+    "use-chacha20poly1305", 
+    "use-sha", 
+    "use-blake2",
+    "use-25519", 
+    "use-rust-crypto-kyber", 
+]
+
+alloc = []
+std = [
+    "sha2/std",
+    "blake2/std",
+    "aes-gcm/std",
+    "chacha20poly1305/std",
+    "ml-kem/std",
+    "zeroize/std",
+]
+
+use-sha = ["sha2"]
+use-blake2 = ["blake2"]
+use-aes-gcm = ["aes-gcm"]
+use-chacha20poly1305 = ["chacha20poly1305"]
+use-rust-crypto-kyber = ["ml-kem"]
+use-argyle-kyber512 = ["pqc_kyber/kyber512"]
+use-argyle-kyber768 = ["pqc_kyber"]
+use-argyle-kyber1024 = ["pqc_kyber/kyber1024"]
+use-25519 = ["x25519-dalek"]
+
+
+[dependencies]
+# Mandatory
+arrayvec = { version = "0.7.6", default-features = false }
+rand_core = "0.6.4"
+zeroize = { version = "1.8.1", default-features = false, features = ["zeroize_derive"] }
+
+# Optional
+aes-gcm = { version = "0.10.3", default-features = false, features = ["aes"], optional = true }
+blake2 = { version = "0.10.6", default-features = false, optional = true }
+chacha20poly1305 = { version = "0.10.1", default-features = false, features = ["rand_core"], optional = true }
+ml-kem = { version = "0.2.1", default-features = false, features = ["zeroize"], optional = true }
+pqc_kyber = { version = "0.7.1", default-features = false, optional = true }
+sha2 = { version = "0.10.8", default-features = false, optional = true }
+thiserror-no-std = { version = "2.0.2", default-features = false }
+x25519-dalek = { version = "2.0.1", default-features = false, features = ["static_secrets", "zeroize"], optional = true }
+
+[dev-dependencies]
+rand = "0.8.5"
