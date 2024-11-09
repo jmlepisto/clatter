@@ -49,8 +49,8 @@ handshake process.
 
 ### Example
 
-Simplified example with the most straightforward (and unsecure) PQ handshake pattern and
-no handshake payload data at all:
+Simplified example with the most straightforward (and most unsecure) interactive PQ handshake 
+pattern and no handshake payload data at all:
 
 ```rust
 use clatter::crypto::cipher::ChaChaPoly;

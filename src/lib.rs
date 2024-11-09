@@ -2,7 +2,7 @@
 //! # Clatter 🔊
 //!
 //! ⚠️ **Work in progress** ⚠️
-//! 
+//!
 //! `no_std` compatible, pure Rust implementation of the [Noise framework](https://noiseprotocol.org/noise.html)
 //! with support for [**Post Quantum (PQ) extensions**](https://doi.org/10.1145/3548606.3560577) as presented by
 //! Yawning Angel, Benjamin Dowling, Andreas Hülsing, Peter Schwabe, and Fiona Johanna Weber.
