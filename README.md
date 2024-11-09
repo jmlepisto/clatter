@@ -1,7 +1,7 @@
 # Clatter 🔊
 
 [![Crates.io Version](https://img.shields.io/crates/v/clatter?style=flat-square)](https://crates.io/crates/clatter)
-[![docs.rs](https://img.shields.io/docsrs/clatter?style=flat-square)](https://docs.rs/burster/latest/clatter/)
+[![docs.rs](https://img.shields.io/docsrs/clatter?style=flat-square)](https://docs.rs/clatter/latest/clatter/)
 
 ⚠️ **Work in progress** ⚠️
 
