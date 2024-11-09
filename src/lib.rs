@@ -23,32 +23,34 @@
 //! Handshake messages are exchanged by the peers until the handshake is completed.
 //! After completion, [`Handshaker::finalize`] is called and the handshake state machine
 //! is consumed into a [`transportstate::TransportState`] instance, which can be used
-//! to decrypt and encrypt communications between the peers.
+//! to decrypt and encrypt communication between the peers.
 //!
 //! ## Crypto Vendors
 //!
 //! Currently Clatter has frozen the vendor selection for DH, Cipher and Hash algorithms, but users
 //! can select from multiple KEM vendors.
 //!
-//! Concrete implementations of the crypto algorithms are in the [`crypto`] module.
+//! Concrete implementations of the crypto algorithms are in the [`crypto`] module and users can even
+//! use their own implementations using the definitions in the [`traits`] module.
 //!
 //! ## Features
 //!
 //! To improve build times and produce more optimized binaries, Clatter can be heavily configured by
 //! enabling and disabling crate features. Below is a listing of the available features:
 //!
-//! | Feature flag              | Description                               | Default   | Details                   |
-//! | ---                       | ---                                       | ---       | ---                       |
-//! | `use-25519`               | Enable X25519 DH                          | yes       |                           |
-//! | `use-aes-gcm`             | Enable AES-GCM cipher                     | yes       |                           |
-//! | `use-chacha20poly1305`    | Enable ChaCha20-Poly1305 cipher           | yes       |                           |
-//! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing        | yes       |                           |
-//! | `use-blake2`              | Enable BLAKE2 hashing                     | yes       |                           |
-//! | `use-rust-crypto-kyber`   | Enable Kyber KEMs by RustCrypto           | yes       |                           |
-//! | `use-argyle-kyber512`     | Eable Kyber512 KEM by Argyle-Software     | no        |                           |
-//! | `use-argyle-kyber768`     | Eable Kyber768 KEM by Argyle-Software     | no        |                           |
-//! | `use-argyle-kyber1024`    | Eable Kyber1024 KEM by Argyle-Software    | no        |                           |
-//! | `alloc`                   | Enable allocator support                  | no        | Reserved for future use   |
+//! | Feature flag              | Description                               | Default   | Details                               |
+//! | ---                       | ---                                       | ---       | ---                                   |
+//! | `use-25519`               | Enable X25519 DH                          | yes       |                                       |
+//! | `use-aes-gcm`             | Enable AES-GCM cipher                     | yes       |                                       |
+//! | `use-chacha20poly1305`    | Enable ChaCha20-Poly1305 cipher           | yes       |                                       |
+//! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing        | yes       |                                       |
+//! | `use-blake2`              | Enable BLAKE2 hashing                     | yes       |                                       |
+//! | `use-rust-crypto-kyber`   | Enable Kyber KEMs by RustCrypto           | yes       |                                       |
+//! | `use-argyle-kyber512`     | Eable Kyber512 KEM by Argyle-Software     | no        |                                       |
+//! | `use-argyle-kyber768`     | Eable Kyber768 KEM by Argyle-Software     | no        |                                       |
+//! | `use-argyle-kyber1024`    | Eable Kyber1024 KEM by Argyle-Software    | no        |                                       |
+//! | `std`                     | Enable standard library support           | no        | Currently only affects dependencies   |
+//! | `alloc`                   | Enable allocator support                  | no        | Reserved for future use               |
 //!
 //! ## Example
 //!
@@ -68,14 +70,14 @@
 //!
 //!     // Instantiate initiator handshake
 //!     let mut alice = PqHandshake::<Kyber512, Kyber512, ChaChaPoly, Sha512, _>::new(
-//!         noise_pqnn(),
-//!         &[],
-//!         true,
-//!         None,
-//!         None,
-//!         None,
-//!         None,
-//!         &mut rng_alice,
+//!         noise_pqnn(),   // Handshake pattern
+//!         &[],            // Prologue data
+//!         true,           // Are we the initiator
+//!         None,           // Pre-shared keys..
+//!         None,           // ..
+//!         None,           // ..
+//!         None,           // ..
+//!         &mut rng_alice, // RNG instance
 //!     ).unwrap();
 //!
 //!     let mut buf_alice_send = [0u8; 4096];

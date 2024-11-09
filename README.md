@@ -40,7 +40,7 @@ provided by the common `Handshaker` trait:
 * `finalize()` - Move to transport state
 
 Once the handshake is complete, the handshake state machine can be moved to transport state
-by calling `.finalize()`. This finished the handshake and the returned `TransportState` can
+by calling `.finalize()`. This finishes the handshake and the returned `TransportState` can
 be used for encrypting and decrypting communication with the peer. Voilà!
 
 As already mentioned, this crate is quite verbose due to `no_std` compatibility requirements,
@@ -109,7 +109,6 @@ does not currently implement *SEEC*.
 ## Roadmap before first release
 
 * Add support for PSKs as defined by the Noise spec
-* Add support for all interactive Noise pattern highlighted by the PQNoise paper
 * Add support for all crypto algorithms listed in Noise spec
 * More KEMs with ability to configure the desired vendor
 * Proper testing and fuzzing
