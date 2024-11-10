@@ -6,7 +6,7 @@ use crate::crypto::dh::X25519;
 use crate::crypto::hash::{Blake2b, Sha512};
 #[cfg(feature = "use-argyle-kyber768")]
 use crate::crypto_impl::argyle_software_kyber::Kyber768 as ArgyleKyber;
-use crate::crypto_impl::rust_crypto_kyber::{Kyber1024, Kyber512, Kyber768};
+use crate::crypto_impl::{pqclean_kyber, rust_crypto_kyber};
 use crate::handshakepattern::{
     noise_ik, noise_in, noise_ix, noise_kk, noise_kn, noise_kx, noise_nk, noise_nn, noise_nx,
     noise_pqik, noise_pqin, noise_pqix, noise_pqkk, noise_pqkn, noise_pqkx, noise_pqnk, noise_pqnn,
@@ -56,10 +56,14 @@ fn smoke_pq_handshakes() {
     ];
 
     for pattern in handshakes {
-        pq_handshake::<Kyber512, Kyber768, ChaChaPoly, Blake2b>(pattern.clone());
-        pq_handshake::<Kyber1024, Kyber512, AesGcm, Sha512>(pattern.clone());
+        pq_handshake::<rust_crypto_kyber::Kyber512, rust_crypto_kyber::Kyber768, ChaChaPoly, Blake2b>(
+            pattern.clone(),
+        );
+        pq_handshake::<rust_crypto_kyber::Kyber1024, pqclean_kyber::Kyber512, AesGcm, Sha512>(
+            pattern.clone(),
+        );
         #[cfg(feature = "use-argyle-kyber768")]
-        pq_handshake::<ArgyleKyber, Kyber512, AesGcm, Sha512>(pattern);
+        pq_handshake::<ArgyleKyber, rust_crypto_kyber::Kyber512, AesGcm, Sha512>(pattern);
     }
 }
 
@@ -69,9 +73,9 @@ fn nq_handshake<DH: Dh, C: Cipher, H: Hash>(pattern: HandshakePattern) {
 
     // Generate static keys
     let alice_s = DH::genkey(&mut rng_alice).unwrap();
-    let alice_s_pub = DH::pubkey(&alice_s);
+    let alice_s_pub = alice_s.public.clone();
     let bob_s = DH::genkey(&mut rng_bob).unwrap();
-    let bob_s_pub = DH::pubkey(&bob_s);
+    let bob_s_pub = bob_s.public.clone();
 
     let mut alice = NqHandshake::<DH, C, H, _>::new(
         pattern.clone(),
@@ -133,15 +137,17 @@ fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePatt
 
     // Generate static keys
     let alice_keys = SKEM::genkey(&mut rng_alice).unwrap();
+    let alice_pub = alice_keys.public.clone();
     let bob_keys = SKEM::genkey(&mut rng_bob).unwrap();
+    let bob_pub = bob_keys.public.clone();
 
     let mut alice = PqHandshake::<EKEM, SKEM, C, H, _>::new(
         pattern.clone(),
         b"Stumbling all around",
         true,
-        Some(alice_keys.secret.clone()),
+        Some(alice_keys),
         None,
-        Some(bob_keys.public.clone()),
+        Some(bob_pub),
         None,
         &mut rng_alice,
     )
@@ -151,9 +157,9 @@ fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePatt
         pattern,
         b"Stumbling all around",
         false,
-        Some(bob_keys.secret.clone()),
+        Some(bob_keys),
         None,
-        Some(alice_keys.public.clone()),
+        Some(alice_pub),
         None,
         &mut rng_bob,
     )

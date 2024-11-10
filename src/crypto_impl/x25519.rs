@@ -1,7 +1,8 @@
 use x25519_dalek::{PublicKey, StaticSecret};
 
 use crate::bytearray::{ByteArray, SensitiveByteArray};
-use crate::traits::{CryptoComponent, Dh, ExtractPubKey};
+use crate::traits::{CryptoComponent, Dh};
+use crate::KeyPair;
 
 /// X25519 DH implementation
 pub struct X25519;
@@ -12,19 +13,6 @@ impl CryptoComponent for X25519 {
     }
 }
 
-impl<S, P> ExtractPubKey<S, P> for X25519
-where
-    S: ByteArray,
-    P: ByteArray,
-{
-    fn pubkey(secret: &S) -> P {
-        let mut s = [0; 32];
-        s.copy_from_slice(secret.as_slice());
-        let s = StaticSecret::from(s);
-        P::from_slice(PublicKey::from(&s).as_bytes())
-    }
-}
-
 impl Dh for X25519 {
     type Key = SensitiveByteArray<[u8; 32]>;
     type PubKey = [u8; 32];
@@ -32,10 +20,14 @@ impl Dh for X25519 {
 
     fn genkey<R: rand_core::RngCore + rand_core::CryptoRng>(
         rng: &mut R,
-    ) -> crate::error::DhResult<Self::Key> {
-        Ok(SensitiveByteArray::from_slice(
-            StaticSecret::random_from_rng(rng).as_bytes(),
-        ))
+    ) -> crate::error::DhResult<KeyPair<Self::PubKey, Self::Key>> {
+        let s = StaticSecret::random_from_rng(rng);
+        let p = PublicKey::from(&s);
+
+        Ok(KeyPair {
+            public: Self::PubKey::from_slice(p.as_bytes()),
+            secret: Self::Key::from_slice(s.as_bytes()),
+        })
     }
 
     fn dh(k: &Self::Key, pk: &Self::PubKey) -> crate::error::DhResult<Self::Output> {

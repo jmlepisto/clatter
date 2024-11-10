@@ -19,31 +19,21 @@ pub trait CryptoComponent {
     fn name() -> &'static str;
 }
 
-/// Trait for extracting public keys from secret ones
-pub trait ExtractPubKey<S, P>
-where
-    S: ByteArray,
-    P: ByteArray,
-{
-    /// Extract public key from a secret key
-    fn pubkey(secret: &S) -> P;
-}
-
 /// Common trait for all Diffie-Hellman algorithms
-pub trait Dh: CryptoComponent + ExtractPubKey<Self::Key, Self::PubKey> {
+pub trait Dh: CryptoComponent {
     type Key: ByteArray;
     type PubKey: ByteArray;
     type Output: ByteArray;
 
     /// Generate private key
-    fn genkey<R: RngCore + CryptoRng>(rng: &mut R) -> DhResult<Self::Key>;
+    fn genkey<R: RngCore + CryptoRng>(rng: &mut R) -> DhResult<KeyPair<Self::PubKey, Self::Key>>;
 
     /// Perform DH key exchange
     fn dh(_: &Self::Key, _: &Self::PubKey) -> DhResult<Self::Output>;
 }
 
 /// Common trait for all key encapsulation mechanisms
-pub trait Kem: CryptoComponent + ExtractPubKey<Self::SecretKey, Self::PubKey> {
+pub trait Kem: CryptoComponent {
     type SecretKey: ByteArray;
     type PubKey: ByteArray;
     type Ct: ByteArray;

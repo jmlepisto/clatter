@@ -48,6 +48,7 @@
 //! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing        | yes       |                                       |
 //! | `use-blake2`              | Enable BLAKE2 hashing                     | yes       |                                       |
 //! | `use-rust-crypto-kyber`   | Enable Kyber KEMs by RustCrypto           | yes       |                                       |
+//! | `use-pqclean-kyber`       | Enable Kyber KEMs by PQClean              | yes       |                                       |
 //! | `use-argyle-kyber512`     | Eable Kyber512 KEM by Argyle-Software     | no        |                                       |
 //! | `use-argyle-kyber768`     | Eable Kyber768 KEM by Argyle-Software     | no        |                                       |
 //! | `use-argyle-kyber1024`    | Eable Kyber1024 KEM by Argyle-Software    | no        |                                       |
@@ -144,6 +145,8 @@ pub mod crypto {
     pub mod kem {
         #[cfg(feature = "pqc_kyber")]
         pub use crate::crypto_impl::argyle_software_kyber;
+        #[cfg(feature = "use-pqclean-kyber")]
+        pub use crate::crypto_impl::pqclean_kyber;
         #[cfg(feature = "use-rust-crypto-kyber")]
         pub use crate::crypto_impl::rust_crypto_kyber;
     }
@@ -174,6 +177,6 @@ pub mod crypto {
 /// A zeroize-on-drop container for keys
 #[derive(ZeroizeOnDrop)]
 pub struct KeyPair<P: Zeroize, S: Zeroize> {
-    public: P,
-    secret: S,
+    pub public: P,
+    pub secret: S,
 }

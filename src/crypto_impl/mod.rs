@@ -10,6 +10,9 @@ pub mod sha;
 #[cfg(feature = "pqc_kyber")]
 pub mod argyle_software_kyber;
 
+#[cfg(feature = "use-pqclean-kyber")]
+pub mod pqclean_kyber;
+
 #[cfg(feature = "use-rust-crypto-kyber")]
 pub mod rust_crypto_kyber;
 

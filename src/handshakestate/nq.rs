@@ -12,6 +12,7 @@ use crate::handshakepattern::{HandshakePattern, Token};
 use crate::handshakestate::HandshakeStatus;
 use crate::symmetricstate::SymmetricState;
 use crate::traits::{Cipher, Dh, Handshaker, HandshakerInternal, Hash};
+use crate::KeyPair;
 
 /// Non-post-quantum Noise handshake
 pub struct NqHandshake<'a, DH, C, H, RNG>
@@ -39,8 +40,8 @@ where
     /// * `pattern` - Handshake pattern
     /// * `prolopgue` - Optional prologue data for the handshake
     /// * `initiator` - True if we are the initiator
-    /// * `s` - Our static secret key
-    /// * `e` - Our ephemeral secret key - Shouldn't usually be provided manually
+    /// * `s` - Our static keys
+    /// * `e` - Our ephemeral keys - Shouldn't usually be provided manually
     /// * `rs` - Peer public static key
     /// * `re` - Peer public ephemeral key - Shouldn't usually be provided manually
     /// * `rng` - RNG to use during the handshake
@@ -54,8 +55,8 @@ where
         pattern: HandshakePattern,
         prologue: &[u8],
         initiator: bool,
-        s: Option<DH::Key>,
-        e: Option<DH::Key>,
+        s: Option<KeyPair<DH::PubKey, DH::Key>>,
+        e: Option<KeyPair<DH::PubKey, DH::Key>>,
         rs: Option<DH::PubKey>,
         re: Option<DH::PubKey>,
         rng: &'a mut RNG,
@@ -73,7 +74,9 @@ where
                 Token::S => {
                     if initiator {
                         ss.mix_hash(
-                            DH::pubkey(s.as_ref().ok_or(HandshakeError::MissingMaterial)?)
+                            s.as_ref()
+                                .ok_or(HandshakeError::MissingMaterial)?
+                                .public
                                 .as_slice(),
                         );
                     } else {
@@ -102,7 +105,9 @@ where
                         );
                     } else {
                         ss.mix_hash(
-                            DH::pubkey(s.as_ref().ok_or(HandshakeError::MissingMaterial)?)
+                            s.as_ref()
+                                .ok_or(HandshakeError::MissingMaterial)?
+                                .public
                                 .as_slice(),
                         );
                     };
@@ -116,7 +121,9 @@ where
                         );
                     } else {
                         ss.mix_hash(
-                            DH::pubkey(e.as_ref().ok_or(HandshakeError::MissingMaterial)?)
+                            e.as_ref()
+                                .ok_or(HandshakeError::MissingMaterial)?
+                                .public
                                 .as_slice(),
                         );
                     };
@@ -152,10 +159,13 @@ where
         Ok(this)
     }
 
-    fn dh(a: Option<&DH::Key>, b: Option<&DH::PubKey>) -> HandshakeResult<DH::Output> {
+    fn dh(
+        a: Option<&KeyPair<DH::PubKey, DH::Key>>,
+        b: Option<&DH::PubKey>,
+    ) -> HandshakeResult<DH::Output> {
         let a = a.ok_or(HandshakeError::MissingMaterial)?;
         let b = b.ok_or(HandshakeError::MissingMaterial)?;
-        let out = DH::dh(a, b)?;
+        let out = DH::dh(&a.secret, b)?;
         Ok(out)
     }
 
@@ -230,7 +240,7 @@ where
                         self.internals.e = Some(DH::genkey(&mut self.internals.rng)?);
                     }
 
-                    let e_pub = DH::pubkey(self.internals.e.as_ref().unwrap());
+                    let e_pub = &self.internals.e.as_ref().unwrap().public;
                     self.internals.symmetricstate.mix_hash(e_pub.as_slice());
                     out[cur..cur + DH::PubKey::len()].copy_from_slice(e_pub.as_slice());
                     cur += DH::PubKey::len();
@@ -248,7 +258,7 @@ where
 
                     let encrypted_s_out = &mut out[cur..cur + len];
                     self.internals.symmetricstate.encrypt_and_hash(
-                        DH::pubkey(self.internals.s.as_ref().unwrap()).as_slice(),
+                        self.internals.s.as_ref().unwrap().public.as_slice(),
                         encrypted_s_out,
                     )?;
                     cur += len;

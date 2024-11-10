@@ -6,7 +6,7 @@ use zeroize::Zeroize;
 
 use crate::bytearray::{ByteArray, SensitiveByteArray};
 use crate::error::KemError;
-use crate::traits::{CryptoComponent, ExtractPubKey, Kem};
+use crate::traits::{CryptoComponent, Kem};
 use crate::KeyPair;
 
 /// Kyber512 KEM implementation
@@ -36,17 +36,6 @@ impl CryptoComponent for Kyber1024 {
 
 macro_rules! impl_kyber {
     ($kyber:ty, $params:ty, $sk:expr, $pk:expr, $ct:expr) => {
-        impl<S, P> ExtractPubKey<S, P> for $kyber
-        where
-            S: ByteArray,
-            P: ByteArray,
-        {
-            fn pubkey(s: &S) -> P {
-                let dk = DecapsulationKey::<$params>::from_bytes(s.as_slice().try_into().unwrap());
-                P::from_slice(&dk.encapsulation_key().as_bytes())
-            }
-        }
-
         impl Kem for $kyber {
             type SecretKey = SensitiveByteArray<[u8; $sk]>;
             type PubKey = [u8; $pk];

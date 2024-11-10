@@ -13,6 +13,7 @@ use crate::handshakepattern::{HandshakePattern, Token};
 use crate::handshakestate::HandshakeStatus;
 use crate::symmetricstate::SymmetricState;
 use crate::traits::{Cipher, Handshaker, HandshakerInternal, Hash, Kem};
+use crate::KeyPair;
 
 /// Post-quantum Noise handshake
 pub struct PqHandshake<'a, EKEM, SKEM, C, H, RNG>
@@ -51,8 +52,8 @@ where
     /// * `pattern` - Handshake pattern
     /// * `prolopgue` - Optional prologue data for the handshake
     /// * `initiator` - True if we are the initiator
-    /// * `s` - Our static secret key
-    /// * `e` - Our ephemeral secret key - Shouldn't usually be provided manually
+    /// * `s` - Our static keys
+    /// * `e` - Our ephemeral keys - Shouldn't usually be provided manually
     /// * `rs` - Peer public static key
     /// * `re` - Peer public ephemeral key - Shouldn't usually be provided manually
     /// * `rng` - RNG to use during the handshake
@@ -67,8 +68,8 @@ where
         pattern: HandshakePattern,
         prologue: &[u8],
         initiator: bool,
-        s: Option<SKEM::SecretKey>,
-        e: Option<EKEM::SecretKey>,
+        s: Option<KeyPair<SKEM::PubKey, SKEM::SecretKey>>,
+        e: Option<KeyPair<EKEM::PubKey, EKEM::SecretKey>>,
         rs: Option<SKEM::PubKey>,
         re: Option<EKEM::PubKey>,
         rng: &'a mut RNG,
@@ -86,7 +87,9 @@ where
                 Token::S => {
                     if initiator {
                         ss.mix_hash(
-                            SKEM::pubkey(s.as_ref().ok_or(HandshakeError::MissingMaterial)?)
+                            s.as_ref()
+                                .ok_or(HandshakeError::MissingMaterial)?
+                                .public
                                 .as_slice(),
                         );
                     } else {
@@ -115,7 +118,9 @@ where
                         );
                     } else {
                         ss.mix_hash(
-                            SKEM::pubkey(s.as_ref().ok_or(HandshakeError::MissingMaterial)?)
+                            s.as_ref()
+                                .ok_or(HandshakeError::MissingMaterial)?
+                                .public
                                 .as_slice(),
                         );
                     };
@@ -129,7 +134,9 @@ where
                         );
                     } else {
                         ss.mix_hash(
-                            EKEM::pubkey(e.as_ref().ok_or(HandshakeError::MissingMaterial)?)
+                            e.as_ref()
+                                .ok_or(HandshakeError::MissingMaterial)?
+                                .public
                                 .as_slice(),
                         );
                     };
@@ -206,11 +213,10 @@ where
             match *token {
                 Token::E => {
                     if self.internals.e.is_none() {
-                        self.internals.e =
-                            Some(EKEM::genkey(&mut self.internals.rng)?.secret.clone());
+                        self.internals.e = Some(EKEM::genkey(&mut self.internals.rng)?);
                     }
 
-                    let e_pub = EKEM::pubkey(self.internals.e.as_ref().unwrap());
+                    let e_pub = &self.internals.e.as_ref().unwrap().public;
                     self.internals.symmetricstate.mix_hash(e_pub.as_slice());
                     out[cur..cur + EKEM::PubKey::len()].copy_from_slice(e_pub.as_slice());
                     cur += EKEM::PubKey::len();
@@ -228,7 +234,12 @@ where
 
                     let encrypted_s_out = &mut out[cur..cur + len];
                     self.internals.symmetricstate.encrypt_and_hash(
-                        SKEM::pubkey(self.internals.s.as_ref().unwrap()).as_slice(),
+                        self.internals
+                            .s
+                            .as_ref()
+                            .ok_or(HandshakeError::MissingMaterial)?
+                            .public
+                            .as_slice(),
                         encrypted_s_out,
                     )?;
                     cur += len;
@@ -335,7 +346,10 @@ where
                 Token::Ekem => {
                     let ct = get(EKEM::Ct::len());
                     self.internals.symmetricstate.mix_hash(ct);
-                    let ss = EKEM::decapsulate(ct, self.internals.e.as_ref().unwrap().as_slice())?;
+                    let ss = EKEM::decapsulate(
+                        ct,
+                        self.internals.e.as_ref().unwrap().secret.as_slice(),
+                    )?;
                     self.internals.symmetricstate.mix_key(ss.as_slice());
                 }
                 Token::Skem => {
@@ -352,7 +366,7 @@ where
                         .decrypt_and_hash(ct_enc, ct.as_mut())?;
                     let ss = SKEM::decapsulate(
                         ct.as_slice(),
-                        self.internals.s.as_ref().unwrap().as_slice(),
+                        self.internals.s.as_ref().unwrap().secret.as_slice(),
                     )?;
                     self.internals
                         .symmetricstate

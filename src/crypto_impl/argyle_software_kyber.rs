@@ -11,7 +11,7 @@ use zeroize::Zeroize;
 
 use crate::bytearray::{ByteArray, SensitiveByteArray};
 use crate::error::KemError;
-use crate::traits::{CryptoComponent, ExtractPubKey, Kem};
+use crate::traits::{CryptoComponent, Kem};
 
 /// Kyber512 KEM implementation
 #[cfg(feature = "use-argyle-kyber512")]
@@ -77,16 +77,6 @@ macro_rules! impl_kyber {
                 Ok(SensitiveByteArray::new(
                     decapsulate(ct, sk).map_err(|_| KemError::Decapsulation)?,
                 ))
-            }
-        }
-
-        impl<S, P> ExtractPubKey<S, P> for $kyber
-        where
-            S: ByteArray,
-            P: ByteArray,
-        {
-            fn pubkey(s: &S) -> P {
-                P::from_slice(&public(s.as_slice()))
             }
         }
     };

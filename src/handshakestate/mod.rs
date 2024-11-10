@@ -7,6 +7,7 @@ use crate::error::{HandshakeError, HandshakeResult};
 use crate::handshakepattern::{HandshakePattern, Token};
 use crate::symmetricstate::SymmetricState;
 use crate::traits::{Cipher, Hash};
+use crate::KeyPair;
 
 pub mod dual_layer;
 pub mod nq;
@@ -36,8 +37,8 @@ where
     EP: ByteArray,
 {
     symmetricstate: SymmetricState<C, H>,
-    s: Option<K>,
-    e: Option<EK>,
+    s: Option<KeyPair<P, K>>,
+    e: Option<KeyPair<EP, EK>>,
     rs: Option<P>,
     re: Option<EP>,
     pattern: HandshakePattern,
@@ -46,22 +47,6 @@ where
     initiator_pattern_index: usize,
     responder_pattern_index: usize,
     rng: &'a mut RNG,
-}
-
-impl<'a, C, H, RNG, K, P, EK, EP> Drop for HandshakeInternals<'a, C, H, RNG, K, P, EK, EP>
-where
-    C: Cipher,
-    H: Hash,
-    RNG: RngCore + CryptoRng,
-    K: ByteArray,
-    P: ByteArray,
-    EK: ByteArray,
-    EP: ByteArray,
-{
-    fn drop(&mut self) {
-        self.s.zeroize();
-        self.e.zeroize();
-    }
 }
 
 impl<'a, C, H, RNG, K, P, EK, EP> HandshakeInternals<'a, C, H, RNG, K, P, EK, EP>
