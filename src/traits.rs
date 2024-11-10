@@ -336,6 +336,13 @@ where
         res
     }
 
+    /// Push a PSK to the PSK queue
+    ///
+    /// # Panics:
+    ///  * If the PSK is not [`crate::constants::PSK_LEN`] bytes
+    ///  * If the PSK queue becomes larger than [`crate::constants::MAX_PSKS`]
+    fn push_psk(&mut self, psk: &[u8]);
+
     /// Is the handshake finished
     fn is_finished(&self) -> bool {
         self.status() == HandshakeStatus::Ready

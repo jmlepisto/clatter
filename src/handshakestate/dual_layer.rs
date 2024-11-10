@@ -170,6 +170,10 @@ where
     C: Cipher,
     H: Hash,
 {
+    fn push_psk(&mut self, _psk: &[u8]) {
+        panic!("Not applicable for dual-layer handshakes");
+    }
+
     fn is_write_turn(&self) -> bool {
         if self.outer_completed() {
             self.inner.is_write_turn()

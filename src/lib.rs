@@ -27,6 +27,10 @@
 //! is consumed into a [`transportstate::TransportState`] instance, which can be used
 //! to decrypt and encrypt communication between the peers.
 //!
+//! ## Handshake Patterns
+//!
+//! *Interactive* Noise and PQNoise patterns are available pre-made in the [`handshakepattern`] module.
+//!
 //! ## Crypto Vendors
 //!
 //! Currently Clatter has frozen the vendor selection for DH, Cipher and Hash algorithms, but users

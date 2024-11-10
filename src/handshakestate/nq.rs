@@ -2,11 +2,12 @@
 
 use core::fmt::Write;
 
-use arrayvec::ArrayString;
+use arrayvec::{ArrayString, ArrayVec};
 use rand_core::{CryptoRng, RngCore};
 
 use super::HandshakeInternals;
 use crate::bytearray::ByteArray;
+use crate::constants::{MAX_PSKS, PSK_LEN};
 use crate::error::{HandshakeError, HandshakeResult};
 use crate::handshakepattern::{HandshakePattern, Token};
 use crate::handshakestate::HandshakeStatus;
@@ -114,18 +115,24 @@ where
                 }
                 Token::E => {
                     if initiator {
-                        ss.mix_hash(
-                            re.as_ref()
-                                .ok_or(HandshakeError::MissingMaterial)?
-                                .as_slice(),
-                        );
+                        let re_bytes = re
+                            .as_ref()
+                            .ok_or(HandshakeError::MissingMaterial)?
+                            .as_slice();
+                        ss.mix_hash(re_bytes);
+                        if pattern.has_psk() {
+                            ss.mix_key(re_bytes);
+                        }
                     } else {
-                        ss.mix_hash(
-                            e.as_ref()
-                                .ok_or(HandshakeError::MissingMaterial)?
-                                .public
-                                .as_slice(),
-                        );
+                        let e_bytes = e
+                            .as_ref()
+                            .ok_or(HandshakeError::MissingMaterial)?
+                            .public
+                            .as_slice();
+                        ss.mix_hash(e_bytes);
+                        if pattern.has_psk() {
+                            ss.mix_key(e_bytes);
+                        }
                     };
                 }
                 _ => {
@@ -151,6 +158,7 @@ where
             status,
             initiator_pattern_index: 0,
             responder_pattern_index: 0,
+            psks: ArrayVec::<[u8; PSK_LEN], MAX_PSKS>::new(),
             rng,
         };
 
@@ -242,6 +250,9 @@ where
 
                     let e_pub = &self.internals.e.as_ref().unwrap().public;
                     self.internals.symmetricstate.mix_hash(e_pub.as_slice());
+                    if self.get_pattern().has_psk() {
+                        self.internals.symmetricstate.mix_key(e_pub.as_slice());
+                    }
                     out[cur..cur + DH::PubKey::len()].copy_from_slice(e_pub.as_slice());
                     cur += DH::PubKey::len();
                 }
@@ -262,6 +273,13 @@ where
                         encrypted_s_out,
                     )?;
                     cur += len;
+                }
+                Token::Psk => {
+                    if let Some(psk) = self.internals.psks.pop_at(0) {
+                        self.internals.symmetricstate.mix_key_and_hash(&psk);
+                    } else {
+                        return Err(HandshakeError::PskMissing);
+                    }
                 }
                 t @ (Token::EE | Token::ES | Token::SE | Token::SS) => {
                     let dh_result = self.map_dh(t)?;
@@ -315,6 +333,9 @@ where
                 Token::E => {
                     let re = DH::PubKey::from_slice(get(DH::PubKey::len()));
                     self.internals.symmetricstate.mix_hash(re.as_slice());
+                    if self.get_pattern().has_psk() {
+                        self.internals.symmetricstate.mix_key(re.as_slice());
+                    }
                     self.internals.re = Some(re);
                 }
                 Token::S => {
@@ -329,6 +350,13 @@ where
                         .symmetricstate
                         .decrypt_and_hash(get(len), rs.as_mut())?;
                     self.internals.rs = Some(rs);
+                }
+                Token::Psk => {
+                    if let Some(psk) = self.internals.psks.pop_at(0) {
+                        self.internals.symmetricstate.mix_key_and_hash(&psk);
+                    } else {
+                        return Err(HandshakeError::PskMissing);
+                    }
                 }
                 t @ (Token::EE | Token::ES | Token::SE | Token::SS) => {
                     let dh_result = self.map_dh(t)?;
@@ -367,6 +395,10 @@ where
     H: Hash,
     RNG: RngCore + CryptoRng,
 {
+    fn push_psk(&mut self, psk: &[u8]) {
+        self.internals.push_psk(psk);
+    }
+
     fn is_write_turn(&self) -> bool {
         self.internals.is_write_turn()
     }
@@ -380,11 +412,15 @@ where
 
         let mut overhead = 0;
         let mut has_key = self.internals.has_key();
+        let has_psk = self.get_pattern().has_psk();
 
         for &token in message {
             match token {
                 Token::E => {
                     overhead += DH::PubKey::len();
+                    if has_psk {
+                        has_key = true;
+                    }
                 }
                 Token::S => {
                     overhead += DH::PubKey::len();
@@ -395,6 +431,7 @@ where
                 Token::EE | Token::ES | Token::SE | Token::SS => {
                     has_key = true;
                 }
+                Token::Psk => (),
                 _ => panic!("Incompatible pattern"),
             }
         }

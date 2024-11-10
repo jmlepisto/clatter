@@ -11,6 +11,8 @@ pub enum HandshakeError {
     BufferTooSmall,
     #[error("Handshaker encountered an error earlier and has been disabled")]
     ErrorState,
+    #[error("Required PSKs were not supplied")]
+    PskMissing,
     #[error("KEM error: {0}")]
     Kem(#[from] KemError),
     #[error("DH error: {0}")]

@@ -106,10 +106,11 @@ possible to configure a separate KEM for ephemeral use.
 * PQNoise presents *SEEC*, a method for improving RNG security in bad randomness settings. Clatter
 does not currently implement *SEEC*.
 
-## Roadmap before first release
+## Roadmap before first stable release
 
-* Add support for PSKs as defined by the Noise spec
-* Add support for all crypto algorithms listed in Noise spec
+* ~~Add support for PSKs as defined by the Noise spec~~
+* ~~Add support for all crypto algorithms listed in Noise spec~~, no compatible X448 implementation exists
+* Add support for all fundamental Noise patterns (one-way patterns missing)
 * More KEMs with ability to configure the desired vendor
 * Proper testing and fuzzing
 * Better documentation

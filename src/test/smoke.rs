@@ -7,13 +7,11 @@ use crate::crypto::hash::{Blake2b, Sha512};
 #[cfg(feature = "use-argyle-kyber768")]
 use crate::crypto_impl::argyle_software_kyber::Kyber768 as ArgyleKyber;
 use crate::crypto_impl::{pqclean_kyber, rust_crypto_kyber};
-use crate::handshakepattern::{
-    noise_ik, noise_in, noise_ix, noise_kk, noise_kn, noise_kx, noise_nk, noise_nn, noise_nx,
-    noise_pqik, noise_pqin, noise_pqix, noise_pqkk, noise_pqkn, noise_pqkx, noise_pqnk, noise_pqnn,
-    noise_pqnx, noise_pqxk, noise_pqxn, noise_pqxx, noise_xk, noise_xn, noise_xx, HandshakePattern,
-};
+use crate::handshakepattern::*;
 use crate::traits::{Cipher, Dh, Hash, Kem};
 use crate::{Handshaker, NqHandshake, PqHandshake};
+
+const PSKS: &[[u8; 32]] = &[[0; 32], [1; 32], [2; 32], [3; 32]];
 
 #[test]
 fn smoke_nq_handshakes() {
@@ -30,6 +28,24 @@ fn smoke_nq_handshakes() {
         noise_xk(),
         noise_xn(),
         noise_xx(),
+        noise_ik_psk1(),
+        noise_ik_psk2(),
+        noise_in_psk1(),
+        noise_in_psk2(),
+        noise_ix_psk2(),
+        noise_kk_psk0(),
+        noise_kk_psk2(),
+        noise_kn_psk0(),
+        noise_kn_psk2(),
+        noise_kx_psk2(),
+        noise_nk_psk0(),
+        noise_nk_psk2(),
+        noise_nn_psk0(),
+        noise_nn_psk2(),
+        noise_nx_psk2(),
+        noise_xk_psk3(),
+        noise_xn_psk3(),
+        noise_xx_psk3(),
     ];
 
     for pattern in handshakes {
@@ -53,6 +69,24 @@ fn smoke_pq_handshakes() {
         noise_pqxk(),
         noise_pqxn(),
         noise_pqxx(),
+        noise_pqik_psk1(),
+        noise_pqik_psk2(),
+        noise_pqin_psk1(),
+        noise_pqin_psk2(),
+        noise_pqix_psk2(),
+        noise_pqkk_psk0(),
+        noise_pqkk_psk2(),
+        noise_pqkn_psk0(),
+        noise_pqkn_psk2(),
+        noise_pqkx_psk2(),
+        noise_pqnk_psk0(),
+        noise_pqnk_psk2(),
+        noise_pqnn_psk0(),
+        noise_pqnn_psk2(),
+        noise_pqnx_psk2(),
+        noise_pqxk_psk3(),
+        noise_pqxn_psk3(),
+        noise_pqxx_psk3(),
     ];
 
     for pattern in handshakes {
@@ -100,6 +134,12 @@ fn nq_handshake<DH: Dh, C: Cipher, H: Hash>(pattern: HandshakePattern) {
         &mut rng_bob,
     )
     .unwrap();
+
+    // Push PSKs every time. No harm done if the pattern doesn't use those.
+    for psk in PSKS {
+        alice.push_psk(psk);
+        bob.push_psk(psk);
+    }
 
     let mut alice_buf = [0u8; 4096];
     let mut bob_buf = [0u8; 4096];
@@ -164,6 +204,12 @@ fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePatt
         &mut rng_bob,
     )
     .unwrap();
+
+    // Push PSKs every time. No harm done if the pattern doesn't use those.
+    for psk in PSKS {
+        alice.push_psk(psk);
+        bob.push_psk(psk);
+    }
 
     let mut alice_buf = [0u8; 4096];
     let mut bob_buf = [0u8; 4096];

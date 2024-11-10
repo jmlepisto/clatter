@@ -1,8 +1,10 @@
+use arrayvec::ArrayVec;
 use rand_core::{CryptoRng, RngCore};
 use zeroize::Zeroize;
 
 use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;
+use crate::constants::{MAX_PSKS, PSK_LEN};
 use crate::error::{HandshakeError, HandshakeResult};
 use crate::handshakepattern::{HandshakePattern, Token};
 use crate::symmetricstate::SymmetricState;
@@ -46,6 +48,7 @@ where
     status: HandshakeStatus,
     initiator_pattern_index: usize,
     responder_pattern_index: usize,
+    psks: ArrayVec<[u8; PSK_LEN], MAX_PSKS>,
     rng: &'a mut RNG,
 }
 
@@ -110,5 +113,9 @@ where
 
     pub(crate) fn get_ciphers(&self) -> CipherStates<C> {
         self.symmetricstate.split()
+    }
+
+    fn push_psk(&mut self, psk: &[u8]) {
+        self.psks.push(ByteArray::from_slice(psk));
     }
 }
