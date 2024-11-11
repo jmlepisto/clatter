@@ -1,0 +1,43 @@
+[package]
+name = "clatter-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+rand = "0.8.5"
+
+[dependencies.clatter]
+path = ".."
+
+[[bin]]
+name = "nq_handshake_read"
+path = "fuzz_targets/nq_handshake_read.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pq_handshake_read"
+path = "fuzz_targets/pq_handshake_read.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "nq_handshake_payload"
+path = "fuzz_targets/nq_handshake_payload.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pq_handshake_payload"
+path = "fuzz_targets/pq_handshake_payload.rs"
+test = false
+doc = false
+bench = false

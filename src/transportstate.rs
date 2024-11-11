@@ -7,7 +7,8 @@ use crate::traits::{Cipher, Handshaker, Hash};
 /// Transport state used after a successful handshake
 ///
 /// Contains session keys for secure communication in the
-/// [`CipherStates`] struct.
+/// form of a [`CipherStates`] struct. Users have raw access
+/// to the keys if needed using the [`Self::take`] method.
 pub struct TransportState<C: Cipher, H: Hash> {
     cipherstates: CipherStates<C>,
     h: H::Output,

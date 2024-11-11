@@ -16,6 +16,9 @@ const PSKS: &[[u8; 32]] = &[[0; 32], [1; 32], [2; 32], [3; 32]];
 #[test]
 fn smoke_nq_handshakes() {
     let handshakes = [
+        noise_n(),
+        noise_k(),
+        noise_x(),
         noise_ik(),
         noise_in(),
         noise_ix(),
@@ -28,6 +31,9 @@ fn smoke_nq_handshakes() {
         noise_xk(),
         noise_xn(),
         noise_xx(),
+        noise_n_psk0(),
+        noise_k_psk0(),
+        noise_x_psk1(),
         noise_ik_psk1(),
         noise_ik_psk2(),
         noise_in_psk1(),

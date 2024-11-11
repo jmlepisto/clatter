@@ -11,7 +11,7 @@
 //!
 //! * [`NqHandshake`] - Classical, non-post-quantum Noise handshake
 //! * [`PqHandshake`] - Post-quantum Noise handshake
-//! * [`DualLayerHandshake`] - Dual layer handshake, which combined two Noise handshakes
+//! * [`DualLayerHandshake`] - Dual layer handshake, which combines two Noise handshakes
 //!
 //! Users will pick and instantiate the desired handshake state machine with the crypto primitives
 //! and [`handshakepattern::HandshakePattern`] they wish to use and complete the handshake using the
@@ -115,17 +115,27 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+/// Internally used array-like datatype
 pub mod bytearray;
+/// Cipherstate implementation
 pub mod cipherstate;
+/// Protocol related constants
 pub mod constants;
+/// Concrete crypto implementations
 mod crypto_impl;
+/// Crate error definitions
 pub mod error;
+/// Pre-made handshake patterns and related utilities
 pub mod handshakepattern;
+/// Handshakestate implementation
 mod handshakestate;
+/// Symmetricstate implementation
 mod symmetricstate;
 #[cfg(test)]
 mod test;
+/// Common traits for supporting crypto algorithms
 pub mod traits;
+/// Transportstate implementation
 pub mod transportstate;
 
 pub use handshakestate::dual_layer::DualLayerHandshake;
@@ -179,7 +189,7 @@ pub mod crypto {
 }
 
 /// A zeroize-on-drop container for keys
-#[derive(ZeroizeOnDrop)]
+#[derive(ZeroizeOnDrop, Clone)]
 pub struct KeyPair<P: Zeroize, S: Zeroize> {
     pub public: P,
     pub secret: S,

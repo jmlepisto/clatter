@@ -267,6 +267,13 @@ where
     /// # Returns:
     /// Number of bytes written to destination buffer
     ///
+    /// # Errors:
+    /// * [`HandshakeError::ErrorState`] - Handshaker encountered an error before and cannot be used anymore
+    /// * [`HandshakeError::InvalidState`] - Handshaker is not in receive state
+    /// * [`HandshakeError::BufferTooSmall`] - Message does not fit into provided destination buffer
+    /// * [`HandshakeError::Dh`] - DH error
+    /// * [`HandshakeError::Cipher`] - Encryption error
+    ///
     /// # Panics:
     /// If resulting message length is larger than [`crate::constants::MAX_MESSAGE_LEN`]
     fn write_message(&mut self, payload: &[u8], out: &mut [u8]) -> HandshakeResult<usize> {
@@ -306,9 +313,16 @@ where
     /// # Returns:
     /// Number of payload bytes written to destination buffer
     ///
+    /// # Errors:
+    /// * [`HandshakeError::ErrorState`] - Handshaker encountered an error before and cannot be used anymore
+    /// * [`HandshakeError::InvalidState`] - Handshaker is not in receive state
+    /// * [`HandshakeError::InvalidMessage`] - Input does not match the next expected message
+    /// * [`HandshakeError::BufferTooSmall`] - Payload does not fit into provided destination buffer
+    /// * [`HandshakeError::Dh`] - DH error
+    /// * [`HandshakeError::Cipher`] - Decryption error
+    ///
     /// # Panics:
     /// * If message length is larger than [`crate::constants::MAX_MESSAGE_LEN`]
-    /// * If message length is 0
     fn read_message(&mut self, message: &[u8], out: &mut [u8]) -> HandshakeResult<usize> {
         if message.len() > MAX_MESSAGE_LEN {
             panic!("Maximum Noise message length exceeded");
@@ -322,8 +336,13 @@ where
             return Err(HandshakeError::InvalidState);
         }
 
-        let out_len = message.len() - self.get_next_message_overhead().unwrap();
-        if !out.is_empty() && out.len() < out_len {
+        let overhead = self.get_next_message_overhead().unwrap();
+        if message.len() < overhead {
+            return Err(HandshakeError::InvalidMessage);
+        }
+
+        let out_len = message.len() - overhead;
+        if out.len() < out_len {
             return Err(HandshakeError::BufferTooSmall);
         }
 

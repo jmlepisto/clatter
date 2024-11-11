@@ -79,6 +79,9 @@ where
     }
 
     /// Encrypt data with currently established key material and update hash
+    ///
+    /// # Warning
+    /// If no key material is available, `plaintext` is simply copied to the `out` buffer
     pub(crate) fn encrypt_and_hash(
         &mut self,
         plaintext: &[u8],
@@ -94,6 +97,9 @@ where
     }
 
     /// Decrypt data with currently established key material and update hash
+    ///
+    /// # Warning
+    /// If no key material is available, `data` is simply copied to the `out` buffer
     pub(crate) fn decrypt_and_hash(&mut self, data: &[u8], out: &mut [u8]) -> CipherResult<()> {
         if let Some(ref mut c) = self.cipherstate {
             c.decrypt_with_ad(self.h.as_slice(), data, out)?;

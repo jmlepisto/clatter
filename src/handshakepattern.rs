@@ -541,6 +541,48 @@ pub fn noise_pqix_psk2() -> HandshakePattern {
 // NQ patterns:
 
 /// ```text
+/// <- s
+/// ...
+/// -> e, es
+/// ```
+pub fn noise_n() -> HandshakePattern {
+    HandshakePattern::new("N", &[], &[Token::S], &[&[Token::E, Token::ES]], &[], false)
+}
+
+/// ```text
+/// -> s
+/// <- s
+/// ...
+/// -> e, es, ss
+/// ```
+pub fn noise_k() -> HandshakePattern {
+    HandshakePattern::new(
+        "K",
+        &[],
+        &[Token::S],
+        &[&[Token::E, Token::ES, Token::SS]],
+        &[],
+        false,
+    )
+}
+
+/// ```text
+/// <- s
+/// ...
+/// -> e, es, s, ss
+/// ```
+pub fn noise_x() -> HandshakePattern {
+    HandshakePattern::new(
+        "X",
+        &[],
+        &[Token::S],
+        &[&[Token::E, Token::ES, Token::S, Token::SS]],
+        &[],
+        false,
+    )
+}
+
+/// ```text
 /// -> e
 /// <- e, ee
 /// ```
@@ -737,6 +779,34 @@ pub fn noise_ix() -> HandshakePattern {
 }
 
 // NQ patterns with PSKs:
+
+/// ```text
+/// <- s
+/// ...
+/// -> psk, e, es
+/// ```
+pub fn noise_n_psk0() -> HandshakePattern {
+    noise_n().add_psks(&[0], "Npsk0")
+}
+
+/// ```text
+/// -> s
+/// <- s
+/// ...
+/// -> psk, e, es, ss
+/// ```
+pub fn noise_k_psk0() -> HandshakePattern {
+    noise_k().add_psks(&[0], "Kpsk0")
+}
+
+/// ```text
+/// <- s
+/// ...
+/// -> e, es, s, ss, psk
+/// ```
+pub fn noise_x_psk1() -> HandshakePattern {
+    noise_x().add_psks(&[1], "Xpsk1")
+}
 
 /// ```text
 /// -> psk, e

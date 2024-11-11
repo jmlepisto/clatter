@@ -14,10 +14,9 @@ use crate::transportstate::TransportState;
 /// as the NQ alternatives. In this use case, it's recommended to use
 /// the NQ handshake as the outer layer.
 ///
-/// # Arguments:
 /// Dual layer handshakes require an additional intermediate buffer
 /// for decrypting outer layer handshake messages. The buffer size
-/// is controlled by the generic argument `BUF`.
+/// is controlled by the generic parameter `BUF`.
 pub struct DualLayerHandshake<Outer, Inner, C, H, const BUF: usize>
 where
     Inner: Handshaker<C, H>,

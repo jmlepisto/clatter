@@ -4,12 +4,12 @@
 //! be active at a time.
 
 use pqc_kyber::{
-    decapsulate, encapsulate, keypair, public, KYBER_CIPHERTEXTBYTES, KYBER_PUBLICKEYBYTES,
+    decapsulate, encapsulate, keypair, KYBER_CIPHERTEXTBYTES, KYBER_PUBLICKEYBYTES,
     KYBER_SECRETKEYBYTES, KYBER_SSBYTES,
 };
 use zeroize::Zeroize;
 
-use crate::bytearray::{ByteArray, SensitiveByteArray};
+use crate::bytearray::SensitiveByteArray;
 use crate::error::KemError;
 use crate::traits::{CryptoComponent, Kem};
 
@@ -59,7 +59,7 @@ macro_rules! impl_kyber {
 
                 Ok(crate::KeyPair {
                     public: keys.public,
-                    secret: SensitiveByteArray::new(keys.secret),
+                    secret: Self::SecretKey::new(keys.secret),
                 })
             }
 

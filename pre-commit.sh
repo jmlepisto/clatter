@@ -2,3 +2,4 @@
 
 cargo clippy -- -Dwarnings
 cargo +nightly fmt --all
+./test.sh

@@ -39,19 +39,19 @@ where
     >,
 }
 
-impl<'a, EKEM, SKEM, C, H, RNG> PqHandshake<'a, EKEM, SKEM, C, H, RNG>
+impl<'a, EKEM, SKEM, CIPHER, HASH, RNG> PqHandshake<'a, EKEM, SKEM, CIPHER, HASH, RNG>
 where
     EKEM: Kem,
     SKEM: Kem,
-    C: Cipher,
-    H: Hash,
+    CIPHER: Cipher,
+    HASH: Hash,
     RNG: RngCore + CryptoRng,
 {
     /// Initialize new post-quantum handshake
     ///
     /// # Arguments:
     /// * `pattern` - Handshake pattern
-    /// * `prolopgue` - Optional prologue data for the handshake
+    /// * `prologue` - Optional prologue data for the handshake
     /// * `initiator` - True if we are the initiator
     /// * `s` - Our static keys
     /// * `e` - Our ephemeral keys - Shouldn't usually be provided manually
@@ -62,8 +62,8 @@ where
     /// # Generic parameters:
     /// * `EKEM` - KEM algorithm to use for ephemeral key encapsulation
     /// * `SKEM` - KEM algorithm to use for static key encapsulation
-    /// * `C` - Cipher algorithm to use
-    /// * `H` - Hashing algorithm to use
+    /// * `CIPHER` - Cipher algorithm to use
+    /// * `HASH` - Hashing algorithm to use
     #[allow(clippy::too_many_arguments)] // Okay for now
     pub fn new(
         pattern: HandshakePattern,
@@ -74,7 +74,7 @@ where
         rs: Option<SKEM::PubKey>,
         re: Option<EKEM::PubKey>,
         rng: &'a mut RNG,
-    ) -> Result<PqHandshake<'a, EKEM, SKEM, C, H, RNG>, HandshakeError> {
+    ) -> Result<PqHandshake<'a, EKEM, SKEM, CIPHER, HASH, RNG>, HandshakeError> {
         // Can't KEM without KEM, right
         assert!(pattern.is_kem());
 

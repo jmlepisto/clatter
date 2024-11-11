@@ -28,18 +28,18 @@ where
     internals: HandshakeInternals<'a, C, H, RNG, DH::Key, DH::PubKey, DH::Key, DH::PubKey>,
 }
 
-impl<'a, DH, C, H, RNG> NqHandshake<'a, DH, C, H, RNG>
+impl<'a, DH, CIPHER, HASH, RNG> NqHandshake<'a, DH, CIPHER, HASH, RNG>
 where
     DH: Dh,
-    C: Cipher,
-    H: Hash,
+    CIPHER: Cipher,
+    HASH: Hash,
     RNG: RngCore + CryptoRng,
 {
     /// Initialize new non-post-quantum handshake
     ///
     /// # Arguments:
     /// * `pattern` - Handshake pattern
-    /// * `prolopgue` - Optional prologue data for the handshake
+    /// * `prologue` - Optional prologue data for the handshake
     /// * `initiator` - True if we are the initiator
     /// * `s` - Our static keys
     /// * `e` - Our ephemeral keys - Shouldn't usually be provided manually
@@ -49,8 +49,8 @@ where
     ///
     /// # Generic parameters:
     /// * `DH` - DH algorithm to use
-    /// * `C` - Cipher algorithm to use
-    /// * `H` - Hashing algorithm to use
+    /// * `CIPHER` - Cipher algorithm to use
+    /// * `HASH` - Hashing algorithm to use
     #[allow(clippy::too_many_arguments)] // Okay for now
     pub fn new(
         pattern: HandshakePattern,
@@ -61,7 +61,7 @@ where
         rs: Option<DH::PubKey>,
         re: Option<DH::PubKey>,
         rng: &'a mut RNG,
-    ) -> Result<NqHandshake<'a, DH, C, H, RNG>, HandshakeError> {
+    ) -> Result<NqHandshake<'a, DH, CIPHER, HASH, RNG>, HandshakeError> {
         // No KEMs tolerated here
         assert!(!pattern.is_kem());
 
