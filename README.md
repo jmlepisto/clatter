@@ -100,7 +100,7 @@ fn main() {
 
 ### Selectable Features
 
-Clatter allows the user to pick the crypto primitives they wish to use via feature flags. Below is a table
+Clatter allows user to pick the crypto primitives they wish to use via feature flags. Below is a table
 of all the configurable features supported by Clatter:
 
 | Feature flag              | Description                                       | Default   | Details                                       |
@@ -164,4 +164,5 @@ does not currently implement *SEEC*.
 * ~~More KEMs with ability to configure the desired vendor~~
 * Proper testing and fuzzing
 * Better documentation
+* Intuitive Noise pattern parser with `alloc`feature
 
