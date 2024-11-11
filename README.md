@@ -26,9 +26,9 @@ huge thanks to the developers for their effort!
 
 From user perspective, everything in this crate is built around three types:
 
-* `NqHandshake` - Classical, non-post-quantum Noise handshake
-* `PqHandshake` - Post-quantum Noise handshake
-* `DualLayerHandshake` - Dual layer handshake, which combines and pipes two Noise handshakes
+* [`NqHandshake`](https://docs.rs/clatter/latest/clatter/struct.NqHandshake.html) - Classical, non-post-quantum Noise handshake
+* [`PqHandshake`](https://docs.rs/clatter/latest/clatter/struct.PqHandshake.html) - Post-quantum Noise handshake
+* [`DualLayerHandshake`](https://docs.rs/clatter/latest/clatter/struct.DualLayerHandshake.html) - Dual layer handshake, which combines two Noise handshakes
 
 Users will pick and instantiate the desired handshake state machine with the crypto primitives
 they wish to use (supplied as generic parameters) and complete the handshake using the methods 
