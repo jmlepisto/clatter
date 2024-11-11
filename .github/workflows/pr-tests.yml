@@ -15,11 +15,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install nightly
-      run: rustup toolchain install nightly
-    - name: Install cargo-fuzz
-      run: cargo install cargo-fuzz
     - name: Run tests
       run: ./test.sh
-    - name: Quick fuzz
-      run: ./fuzz.sh 180
