@@ -61,7 +61,7 @@ fn main() {
     let _ = alice.read_message(&buf_bob[..n], &mut buf_alice).unwrap();
 
     // Third handshake message from initiator to responder
-    // -> s, se
+    // -> s, se, psk
     let n = alice.write_message(&[], &mut buf_alice).unwrap();
     let _ = bob.read_message(&buf_alice[..n], &mut buf_bob).unwrap();
 

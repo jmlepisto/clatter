@@ -9,6 +9,12 @@ use crate::traits::{Cipher, Handshaker, Hash};
 /// Contains session keys for secure communication in the
 /// form of a [`CipherStates`] struct. Users have raw access
 /// to the keys if needed using the [`Self::take`] method.
+///
+/// # Sending and receiving messages:
+/// * [`Self::send`]
+/// * [`Self::receive`]
+/// * [`Self::send_in_place`]
+/// * [`Self::receive_in_place`]
 pub struct TransportState<C: Cipher, H: Hash> {
     cipherstates: CipherStates<C>,
     h: H::Output,
@@ -33,6 +39,20 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     ///
     /// Encrypts data from `msg` and places the resulting ciphertext
     /// in `buf`, returning the total number of bytes written.
+    ///
+    /// # Arguments:
+    /// * `msg` - Message buffer to encrypt
+    /// * `buf` - Destination buffer to store the encrypted message
+    ///
+    /// # Returns:
+    /// * Encrypted ytes written to `buf`
+    ///
+    /// # Errors:
+    /// * [`TransportError::BufferTooSmall`] - Resulting message does not fit in `buf`
+    /// * [`TransportError::Cipher`] - Encryption error
+    ///
+    /// # Panics:
+    /// * If resulting message length exceeds [`MAX_MESSAGE_LEN`]
     pub fn send(&mut self, msg: &[u8], buf: &mut [u8]) -> TransportResult<usize> {
         let out_len = msg.len() + C::tag_len();
 
@@ -59,6 +79,20 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     /// Encrypts `msg_len` bytes in `msg` in-place,
     /// returning the total number of bytes the resulting
     /// ciphertext takes.
+    ///
+    /// # Arguments:
+    /// * `msg` - Message buffer
+    /// * `msg_len` - How many bytes from the beginning of `msg` will be encrypted in-place
+    ///
+    /// # Returns:
+    /// * Encrypted bytes written to `msg`
+    ///
+    /// # Errors:
+    /// * [`TransportError::BufferTooSmall`] - Resulting message does not fit in `buf`
+    /// * [`TransportError::Cipher`] - Encryption error
+    ///
+    /// # Panics:
+    /// * If resulting message length exceeds [`MAX_MESSAGE_LEN`]
     pub fn send_in_place(&mut self, msg: &mut [u8], msg_len: usize) -> TransportResult<usize> {
         let out_len = msg_len + C::tag_len();
 
@@ -84,13 +118,31 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     ///
     /// Decrypts data from `msg` and places the resulting plaintext
     /// in `buf`, returning the total number of bytes written.
+    ///
+    /// # Arguments:
+    /// * `msg` - Received message buffer
+    /// * `buf` - Destination buffer to store the decrypted message
+    ///
+    /// # Returns:
+    /// * Decrypted bytes written to `buf`
+    ///
+    /// # Errors:
+    /// * [`TransportError::TooShort`] - Provided message `msg` is too short for decryption
+    /// * [`TransportError::BufferTooSmall`] - Resulting message does not fit in `buf`
+    /// * [`TransportError::Cipher`] - Decryption error
+    ///
+    /// # Panics
+    /// * If message length exceeds [`MAX_MESSAGE_LEN`]
     pub fn receive(&mut self, msg: &[u8], buf: &mut [u8]) -> TransportResult<usize> {
-        let out_len = msg.len() - C::tag_len();
+        if msg.len() < C::tag_len() {
+            return Err(TransportError::TooShort);
+        }
 
         if msg.len() > MAX_MESSAGE_LEN {
             panic!("Maximum Noise message length exceeded");
         }
 
+        let out_len = msg.len() - C::tag_len();
         if buf.len() < out_len {
             return Err(TransportError::BufferTooSmall);
         }
@@ -110,7 +162,26 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     /// Decrypts `msg_len` bytes in `msg` in-place,
     /// returning the total number of byte the resulting
     /// plaintext takes.
+    ///
+    /// # Arguments:
+    /// * `msg` - Message buffer
+    /// * `msg_len` - How many bytes from the beginning of `msg` will be decrypted in-place
+    ///
+    /// # Returns:
+    /// * Decrypted bytes written to `msg`
+    ///
+    /// # Errors:
+    /// * [`TransportError::TooShort`] - Provided message `msg` is too short for decryption
+    /// * [`TransportError::BufferTooSmall`] - Resulting message does not fit in `buf`
+    /// * [`TransportError::Cipher`] - Decryption error
+    ///
+    /// # Panics
+    /// * If message length exceeds [`MAX_MESSAGE_LEN`]
     pub fn receive_in_place(&mut self, msg: &mut [u8], msg_len: usize) -> TransportResult<usize> {
+        if msg_len < C::tag_len() {
+            return Err(TransportError::TooShort);
+        }
+
         if msg_len > MAX_MESSAGE_LEN {
             panic!("Maximum Noise message length exceeded");
         }
