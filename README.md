@@ -2,7 +2,7 @@
 
 [![Crates.io Version](https://img.shields.io/crates/v/clatter?style=flat-square)](https://crates.io/crates/clatter)
 [![docs.rs](https://img.shields.io/docsrs/clatter?style=flat-square)](https://docs.rs/clatter/latest/clatter/)
-![GitHub branch check runs](https://img.shields.io/github/check-runs/jmlepisto/clatter/main?style=flat-square)
+[![GitHub branch check runs](https://img.shields.io/github/check-runs/jmlepisto/clatter/main?style=flat-square)](https://github.com/jmlepisto/clatter/actions)
 
 
 ⚠️ **Work in progress** ⚠️
