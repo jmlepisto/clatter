@@ -98,6 +98,30 @@ fn main() {
 }
 ```
 
+### Selectable Features
+
+Clatter allows the user to pick the crypto primitives they wish to use via feature flags. Below is a table
+of all the configurable features supported by Clatter:
+
+| Feature flag              | Description                                       | Default   | Details                                       |
+| ---                       | ---                                               | ---       | ---                                           |
+| `use-25519`               | Enable X25519 DH                                  | yes       |                                               |
+| `use-aes-gcm`             | Enable AES-GCM cipher                             | yes       |                                               |
+| `use-chacha20poly1305`    | Enable ChaCha20-Poly1305 cipher                   | yes       |                                               |
+| `use-sha`                 | Enable SHA-256 and SHA-512 hashing                | yes       |                                               |
+| `use-blake2`              | Enable BLAKE2 hashing                             | yes       |                                               |
+| `use-rust-crypto-kyber`   | Enable Kyber KEMs by [RustCrypto][RustCrypto]     | yes       |                                               |
+| `use-pqclean-kyber`       | Enable Kyber KEMs by [PQClean][PQClean]           | yes       |                                               |
+| `use-argyle-kyber512`     | Eable Kyber512 KEM by [Argyle-Software][Argyle]   | no        | Only one Argyle KEM can be enabled at a time  |
+| `use-argyle-kyber768`     | Eable Kyber768 KEM by [Argyle-Software][Argyle]   | no        |                                               |
+| `use-argyle-kyber1024`    | Eable Kyber1024 KEM by [Argyle-Software][Argyle]  | no        |                                               |
+| `std`                     | Enable standard library support                   | no        | Currently only affects dependencies           |
+| `alloc`                   | Enable allocator support                          | no        | Reserved for future use                       |
+
+[RustCrypto]: https://github.com/RustCrypto/KEMs
+[PQClean]: https://github.com/rustpq/pqcrypto
+[Argyle]: https://github.com/Argyle-Software/kyber
+
 ## PQ? NQ? Why should I care?
 
 This crate refers to classical Noise handshakes as NQ handshakes (non-post-quantum). But what does a
@@ -136,8 +160,8 @@ does not currently implement *SEEC*.
 
 * ~~Add support for PSKs as defined by the Noise spec~~
 * ~~Add support for all crypto algorithms listed in Noise spec~~, no compatible X448 implementation exists
-* Add support for all fundamental Noise patterns (one-way patterns missing)
-* More KEMs with ability to configure the desired vendor
+* ~~Add support for all fundamental Noise patterns (one-way patterns missing)~~
+* ~~More KEMs with ability to configure the desired vendor~~
 * Proper testing and fuzzing
 * Better documentation
 
