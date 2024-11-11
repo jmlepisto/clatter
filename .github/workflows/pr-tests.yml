@@ -4,18 +4,20 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [ "main" ]
+  push:
+    branches: [ "main" ]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
+    - name: Install
+      run: cargo install cargo-fuzz
     - name: Run tests
       run: ./test.sh
+    - name: Quick fuzz
+      run: ./fuzz.sh 180
