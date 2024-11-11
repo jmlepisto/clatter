@@ -58,7 +58,7 @@ pub enum KemError {
 
 pub type KemResult<T> = Result<T, KemError>;
 
-// Errors that can happen during DH operations
+/// Errors that can happen during DH operations
 #[derive(Debug, Error, Display)]
 pub enum DhError {
     /// Error generating keys
