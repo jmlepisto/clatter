@@ -3,7 +3,7 @@
 use clatter::bytearray::ByteArray;
 use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
 use clatter::crypto::dh::X25519;
-use clatter::crypto::hash::{Blake2b, Sha512};
+use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
 #[cfg(feature = "use-argyle-kyber768")]
 use clatter::crypto::kem::argyle_software_kyber::Kyber768 as ArgyleKyber;
 use clatter::crypto::kem::{pqclean_kyber, rust_crypto_kyber};
@@ -56,7 +56,14 @@ fn smoke_nq_handshakes() {
 
     for pattern in handshakes {
         nq_handshake::<X25519, ChaChaPoly, Sha512>(pattern.clone());
-        nq_handshake::<X25519, AesGcm, Blake2b>(pattern);
+        nq_handshake::<X25519, ChaChaPoly, Sha256>(pattern.clone());
+        nq_handshake::<X25519, ChaChaPoly, Blake2b>(pattern.clone());
+        nq_handshake::<X25519, ChaChaPoly, Blake2s>(pattern.clone());
+
+        nq_handshake::<X25519, AesGcm, Sha512>(pattern.clone());
+        nq_handshake::<X25519, AesGcm, Sha256>(pattern.clone());
+        nq_handshake::<X25519, AesGcm, Blake2b>(pattern.clone());
+        nq_handshake::<X25519, AesGcm, Blake2s>(pattern.clone());
     }
 }
 
@@ -95,15 +102,40 @@ fn smoke_pq_handshakes() {
         noise_pqxx_psk3(),
     ];
 
+    fn cipher_hash_combos<EKEM: Kem, SKEM: Kem>(pattern: HandshakePattern) {
+        pq_handshake::<EKEM, SKEM, ChaChaPoly, Blake2b>(pattern.clone());
+        pq_handshake::<EKEM, SKEM, ChaChaPoly, Blake2s>(pattern.clone());
+        pq_handshake::<EKEM, SKEM, ChaChaPoly, Sha256>(pattern.clone());
+        pq_handshake::<EKEM, SKEM, ChaChaPoly, Sha512>(pattern.clone());
+
+        pq_handshake::<EKEM, SKEM, AesGcm, Blake2b>(pattern.clone());
+        pq_handshake::<EKEM, SKEM, AesGcm, Blake2s>(pattern.clone());
+        pq_handshake::<EKEM, SKEM, AesGcm, Sha256>(pattern.clone());
+        pq_handshake::<EKEM, SKEM, AesGcm, Sha512>(pattern.clone());
+    }
+
     for pattern in handshakes {
-        pq_handshake::<rust_crypto_kyber::Kyber512, rust_crypto_kyber::Kyber768, ChaChaPoly, Blake2b>(
+        // Rust crypto
+        cipher_hash_combos::<rust_crypto_kyber::Kyber512, rust_crypto_kyber::Kyber512>(
             pattern.clone(),
         );
-        pq_handshake::<rust_crypto_kyber::Kyber1024, pqclean_kyber::Kyber512, AesGcm, Sha512>(
+        cipher_hash_combos::<rust_crypto_kyber::Kyber768, rust_crypto_kyber::Kyber768>(
             pattern.clone(),
         );
+        cipher_hash_combos::<rust_crypto_kyber::Kyber1024, rust_crypto_kyber::Kyber1024>(
+            pattern.clone(),
+        );
+
+        // PQCLean
+        cipher_hash_combos::<pqclean_kyber::Kyber512, pqclean_kyber::Kyber512>(pattern.clone());
+        cipher_hash_combos::<pqclean_kyber::Kyber768, pqclean_kyber::Kyber768>(pattern.clone());
+        cipher_hash_combos::<pqclean_kyber::Kyber1024, pqclean_kyber::Kyber1024>(pattern.clone());
+
+        // One cross-use test just in case
+        cipher_hash_combos::<pqclean_kyber::Kyber768, rust_crypto_kyber::Kyber768>(pattern.clone());
+
         #[cfg(feature = "use-argyle-kyber768")]
-        pq_handshake::<ArgyleKyber, rust_crypto_kyber::Kyber512, AesGcm, Sha512>(pattern);
+        cipher_hash_combos::<ArgyleKyber, ArgyleKyber>(pattern);
     }
 }
 
@@ -217,8 +249,8 @@ fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePatt
         bob.push_psk(psk);
     }
 
-    let mut alice_buf = [0u8; 4096];
-    let mut bob_buf = [0u8; 4096];
+    let mut alice_buf = [0u8; 8182];
+    let mut bob_buf = [0u8; 8182];
 
     loop {
         let n = alice.write_message(&[], &mut alice_buf).unwrap();

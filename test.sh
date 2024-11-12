@@ -1,4 +1,4 @@
-cargo test --features=\
+cargo test --release --features=\
 use-sha,\
 use-blake2,\
 use-aes-gcm,\

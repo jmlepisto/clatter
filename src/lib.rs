@@ -64,7 +64,7 @@
 //! Simplified example with the most straightforward (and unsecure) PQ handshake pattern and
 //! no handshake payload data at all:
 //!
-//! ```ignore
+//! ```no_run
 //! use clatter::crypto::cipher::ChaChaPoly;
 //! use clatter::crypto::hash::Sha512;
 //! use clatter::crypto::kem::rust_crypto_kyber::Kyber512;
@@ -72,44 +72,41 @@
 //! use clatter::traits::Handshaker;
 //! use clatter::PqHandshake;
 //!
-//! fn main() {
-//!     let mut rng_alice = rand::thread_rng();
+//! let mut rng_alice = rand::thread_rng();
 //!
-//!     // Instantiate initiator handshake
-//!     let mut alice = PqHandshake::<Kyber512, Kyber512, ChaChaPoly, Sha512, _>::new(
-//!         noise_pqnn(),   // Handshake pattern
-//!         &[],            // Prologue data
-//!         true,           // Are we the initiator
-//!         None,           // Pre-shared keys..
-//!         None,           // ..
-//!         None,           // ..
-//!         None,           // ..
-//!         &mut rng_alice, // RNG instance
-//!     ).unwrap();
+//! // Instantiate initiator handshake
+//! let mut alice = PqHandshake::<Kyber512, Kyber512, ChaChaPoly, Sha512, _>::new(
+//!     noise_pqnn(),   // Handshake pattern
+//!     &[],            // Prologue data
+//!     true,           // Are we the initiator
+//!     None,           // Pre-shared keys..
+//!     None,           // ..
+//!     None,           // ..
+//!     None,           // ..
+//!     &mut rng_alice, // RNG instance
+//! ).unwrap();
 //!
-//!     let mut buf_alice_send = [0u8; 4096];
-//!     let mut buf_alice_receive = [0u8; 4096];
+//! let mut buf_alice_send = [0u8; 4096];
+//! let mut buf_alice_receive = [0u8; 4096];
 //!
-//!     // Write handshake message and deliver to peer
-//!     let n = alice.write_message(&[], &mut buf_alice_send).unwrap();
-//!     my_send_function(&buf_alice_send[..n]);
+//! // Write handshake message and deliver to peer
+//! let n = alice.write_message(&[], &mut buf_alice_send).unwrap();
+//! // --> Send &buf_alice_send[..n]) to peer
 //!
-//!     // Receive handshake message and process it
-//!     let n = my_receive_function(&mut buf_alice_receive);
-//!     let _ = alice.read_message(&buf_alice_receive[..n], &mut[]).unwrap();
+//! // Receive handshake message and process it
+//! // <-- Receive message from peer to &buf_alice_receive
+//! let _ = alice.read_message(&buf_alice_receive[..n], &mut[]).unwrap();
 //!
-//!     assert!(alice.is_finished());
+//! assert!(alice.is_finished());
 //!
-//!     // Move to transport state
-//!     let mut alice = alice.finalize().unwrap();
+//! // Move to transport state
+//! let mut alice = alice.finalize().unwrap();
 //!
-//!     // All done! Use .send() and .receive() on the transport state to communicate
-//!     // with the peer
-//!     let n = alice.send(b"Hello from Alice", &mut buf_alice_send).unwrap();
-//!     my_send_function(& buf_alice_send[..n]);   
-//! }
+//! // All done! Use .send() and .receive() on the transport state to encrypt
+//! // and decrypt communication with the peer
+//! let n = alice.send(b"Hello from Alice", &mut buf_alice_send).unwrap();
+//! // --> Send &buf_alice_send[..n]) to peer
 //! ```
-#![allow(clippy::needless_doctest_main)]
 
 // Not really used for now
 #[cfg(feature = "alloc")]

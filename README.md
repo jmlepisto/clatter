@@ -93,8 +93,8 @@ fn main() {
     // Move to transport state
     let mut alice = alice.finalize().unwrap();
 
-    // All done! Use .send() and .receive() on the transport state to communicate
-    // with the peer
+    // All done! Use .send() and .receive() on the transport state to encrypt
+    // and decrypt communication with the peer
     let n = alice.send(b"Hello from Alice", &mut buf_alice_send).unwrap();
     my_send_function(&buf_alice_send[..n]);   
 }
