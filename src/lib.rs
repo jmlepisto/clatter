@@ -131,8 +131,6 @@ pub mod handshakepattern;
 mod handshakestate;
 /// Symmetricstate implementation
 mod symmetricstate;
-#[cfg(test)]
-mod test;
 /// Common traits for supporting crypto algorithms
 pub mod traits;
 /// Transportstate implementation

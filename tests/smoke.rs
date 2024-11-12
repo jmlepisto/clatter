@@ -1,15 +1,15 @@
 //! Basic smoke tests - not full coverage on all crypto primitive combinations but good enough
 
-use crate::bytearray::ByteArray;
-use crate::crypto::cipher::{AesGcm, ChaChaPoly};
-use crate::crypto::dh::X25519;
-use crate::crypto::hash::{Blake2b, Sha512};
+use clatter::bytearray::ByteArray;
+use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
+use clatter::crypto::dh::X25519;
+use clatter::crypto::hash::{Blake2b, Sha512};
 #[cfg(feature = "use-argyle-kyber768")]
-use crate::crypto_impl::argyle_software_kyber::Kyber768 as ArgyleKyber;
-use crate::crypto_impl::{pqclean_kyber, rust_crypto_kyber};
-use crate::handshakepattern::*;
-use crate::traits::{Cipher, Dh, Hash, Kem};
-use crate::{Handshaker, NqHandshake, PqHandshake};
+use clatter::crypto::kem::argyle_software_kyber::Kyber768 as ArgyleKyber;
+use clatter::crypto::kem::{pqclean_kyber, rust_crypto_kyber};
+use clatter::handshakepattern::*;
+use clatter::traits::{Cipher, Dh, Hash, Kem};
+use clatter::{Handshaker, NqHandshake, PqHandshake};
 
 const PSKS: &[[u8; 32]] = &[[0; 32], [1; 32], [2; 32], [3; 32]];
 

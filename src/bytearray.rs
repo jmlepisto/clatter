@@ -1,8 +1,10 @@
+use core::fmt::Debug;
+
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Simple trait used throughout the codebase to provide
 /// portable array operations
-pub trait ByteArray: Sized + Zeroize {
+pub trait ByteArray: Sized + Zeroize + PartialEq + Debug {
     fn new_zero() -> Self;
     fn new_with(_: u8) -> Self;
     fn from_slice(_: &[u8]) -> Self;
@@ -15,7 +17,7 @@ pub trait ByteArray: Sized + Zeroize {
 }
 
 /// Encapsulation for all [`ByteArray`] types that is automatically zeroized on drop.
-#[derive(ZeroizeOnDrop, Zeroize, Clone)]
+#[derive(ZeroizeOnDrop, Zeroize, Clone, PartialEq, Debug)]
 pub struct SensitiveByteArray<A: ByteArray>(A);
 
 impl<A: ByteArray> SensitiveByteArray<A> {

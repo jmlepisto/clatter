@@ -40,8 +40,11 @@ impl<C: Cipher> CipherState<C> {
     fn nonce_inc_check(&mut self) {
         // "If incrementing n results in 2^(64)-1, then any further EncryptWithAd()
         // or DecryptWithAd() calls will signal an error to the caller"
-        if self.n.checked_add(1).is_none() {
-            self.overflowed = true;
+        match self.n.checked_add(1) {
+            None => self.overflowed = true,
+            Some(n) => {
+                self.n = n;
+            }
         }
     }
 
@@ -135,5 +138,132 @@ impl<C: Cipher> CipherState<C> {
     /// Rekeys as per Noise spec parts 4.2 and 11.3
     pub fn rekey(&mut self) {
         self.k = C::rekey(&self.k)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use core::u64;
+
+    use super::CipherState;
+    use crate::crypto::cipher::{AesGcm, ChaChaPoly};
+    use crate::traits::Cipher;
+
+    const K: &[u8] = b"Back home.... where I belong....";
+
+    fn cipher_suite<C: Cipher>() {
+        let mut c1 = CipherState::<C>::new(K, 0);
+        let mut c2 = CipherState::<C>::new(K, 0);
+
+        let mut c1_buf = [0u8; 4069];
+        let mut c2_buf = [0u8; 4069];
+
+        let msg = b"Decadent scenes from my memory";
+        let cipher_len = msg.len() + C::tag_len();
+
+        // Normal encrypt-decrypt
+        c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
+            .unwrap();
+        c2.decrypt_with_ad(&[], &c1_buf[..cipher_len], &mut c2_buf[..msg.len()])
+            .unwrap();
+        assert_eq!(*msg, c2_buf[..msg.len()]);
+        assert!(c1_buf[..msg.len()] != c2_buf[..msg.len()]);
+
+        // With AD
+        c1.encrypt_with_ad(b"Close your eyes", msg, &mut c1_buf[..cipher_len])
+            .unwrap();
+        c2.decrypt_with_ad(
+            b"Close your eyes",
+            &c1_buf[..cipher_len],
+            &mut c2_buf[..msg.len()],
+        )
+        .unwrap();
+        assert_eq!(*msg, c2_buf[..msg.len()]);
+
+        // Wrong AD
+        c1.encrypt_with_ad(b"Close your eyes", msg, &mut c1_buf[..cipher_len])
+            .unwrap();
+        assert!(c2
+            .decrypt_with_ad(
+                b"Close your eyes and relax",
+                &c1_buf[..cipher_len],
+                &mut c2_buf[..msg.len()]
+            )
+            .is_err());
+
+        // Nonce is now desynchronized
+        assert!(c1.get_nonce() != c2.get_nonce());
+        c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
+            .unwrap();
+        assert!(c2
+            .decrypt_with_ad(
+                b"Close your eyes and relax",
+                &c1_buf[..cipher_len],
+                &mut c2_buf[..msg.len()]
+            )
+            .is_err());
+
+        // Restore nonce
+        c2.set_nonce(c1.get_nonce());
+        c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
+            .unwrap();
+        c2.decrypt_with_ad(&[], &c1_buf[..cipher_len], &mut c2_buf[..msg.len()])
+            .unwrap();
+        assert_eq!(*msg, c2_buf[..msg.len()]);
+
+        // Rekey responder
+        c2.rekey();
+        c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
+            .unwrap();
+        assert!(c2
+            .decrypt_with_ad(
+                b"Close your eyes and relax",
+                &c1_buf[..cipher_len],
+                &mut c2_buf[..msg.len()]
+            )
+            .is_err());
+
+        // Rekey sender (and restore nonce...)
+        c1.rekey();
+        c2.set_nonce(c1.get_nonce());
+        c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
+            .unwrap();
+        c2.decrypt_with_ad(&[], &c1_buf[..cipher_len], &mut c2_buf[..msg.len()])
+            .unwrap();
+        assert_eq!(*msg, c2_buf[..msg.len()]);
+
+        // Rekey a lot
+        for _ in 0..10000 {
+            c1.rekey();
+            c2.rekey();
+        }
+        c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
+            .unwrap();
+        c2.decrypt_with_ad(&[], &c1_buf[..cipher_len], &mut c2_buf[..msg.len()])
+            .unwrap();
+        assert_eq!(*msg, c2_buf[..msg.len()]);
+
+        // Nonce overflow
+        c1.set_nonce(u64::MAX);
+        // This should be ok
+        c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
+            .unwrap();
+        // This and all following calls should result in an error
+        assert!(c1
+            .encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
+            .is_err());
+        assert!(c1
+            .encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
+            .is_err());
+    }
+
+    #[test]
+    fn cipher_suite_chacha() {
+        cipher_suite::<ChaChaPoly>();
+    }
+
+    #[test]
+    fn cipher_suite_aes_gcm() {
+        cipher_suite::<AesGcm>();
     }
 }
