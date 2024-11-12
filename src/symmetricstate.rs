@@ -41,7 +41,7 @@ where
         }
     }
 
-    /// # Protocol:
+    /// # Protocol
     /// ```text
     /// Sets h = HASH(h || data)
     /// ```
@@ -52,7 +52,7 @@ where
         self.h = h.result();
     }
 
-    /// # Protocol:
+    /// # Protocol
     /// ```text
     /// * Sets ck, temp_k = HKDF(ck, input_key_material, 2).
     /// * If HASHLEN is 64, then truncates temp_k to 32 bytes.
@@ -64,7 +64,7 @@ where
         self.cipherstate = Some(CipherState::new(&temp_k.as_slice()[..C::key_len()], 0));
     }
 
-    /// # Protocol:
+    /// # Protocol
     /// ```text
     /// * Sets ck, temp_h, temp_k = HKDF(ck, input_key_material, 3).
     /// * Calls MixHash(temp_h).
@@ -112,7 +112,7 @@ where
 
     /// Return [`CipherStates`] for encrypting transport messages
     ///
-    /// # Panics:
+    /// # Panics
     /// * If no key material has been stablished
     pub(crate) fn split(&self) -> CipherStates<C> {
         // This means that we are still in the initial state

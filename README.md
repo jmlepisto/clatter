@@ -7,11 +7,11 @@
 
 ⚠️ **Work in progress** ⚠️
 
-`no_std` compatible, pure Rust implementation of the [Noise protocol framework](https://noiseprotocol.org/noise.html)
+`no_std` compatible, pure Rust implementation of the [**Noise protocol framework**](https://noiseprotocol.org/noise.html)
 with support for [**Post Quantum (PQ) extensions**](https://doi.org/10.1145/3548606.3560577) as presented by
 Yawning Angel, Benjamin Dowling, Andreas Hülsing, Peter Schwabe, and Fiona Johanna Weber.
 
-Main targets of this crate are correctness, extensibility, and strict `no_std` compatibility
+Main targets of this crate are **correctness**, extensibility, and strict `no_std` compatibility
 and those come  with the small drawback of more verbose user experience with some boilerplate.
 If you don't need PQ functionality and are developing for a regular target, you probably are better
 off using these instead:
@@ -22,7 +22,10 @@ off using these instead:
 Basis of this implementation relies heavily on the abovementioned crates and I'm extending
 huge thanks to the developers for their effort!
 
-⚠️ **Warning** ⚠️ This library has not received any formal audit and is still in early phase
+⚠️ **Warning** ⚠️ 
+
+* This library has not received any formal audit
+* While we enable some cryptographic providers by default, it is up to **you** to get familiar with those and decide if they meet your security and integrity requirements
 
 ## Basics
 
@@ -30,7 +33,7 @@ From user perspective, everything in this crate is built around three types:
 
 * [`NqHandshake`](https://docs.rs/clatter/latest/clatter/struct.NqHandshake.html) - Classical, non-post-quantum Noise handshake
 * [`PqHandshake`](https://docs.rs/clatter/latest/clatter/struct.PqHandshake.html) - Post-quantum Noise handshake
-* [`DualLayerHandshake`](https://docs.rs/clatter/latest/clatter/struct.DualLayerHandshake.html) - Dual layer handshake, which combines two Noise handshakes
+* [`DualLayerHandshake`](https://docs.rs/clatter/latest/clatter/struct.DualLayerHandshake.html) - Dual layer handshake, which combines two Noise handshakes and allows a naive hybrid encryption approach
 
 Users will pick and instantiate the desired handshake state machine with the crypto primitives
 they wish to use (supplied as generic parameters) and complete the handshake using the methods 
@@ -167,4 +170,14 @@ does not currently implement *SEEC*.
 * Proper testing and fuzzing
 * Better documentation
 * Intuitive Noise pattern parser with `alloc`feature
+
+## Some Coding Quidelines..
+
+Let's be the cleanest Noise Rust implementation there is :)
+
+* `no_std` compatibility required at all times
+* No Clippy warnings allowed - ignores allowed only when absolutely justified
+* Good hygiene expected:
+    * Check for integer overflows
+    * Zeroize sensitive assets on drop
 

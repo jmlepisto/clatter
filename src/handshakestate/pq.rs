@@ -49,7 +49,7 @@ where
 {
     /// Initialize new post-quantum handshake
     ///
-    /// # Arguments:
+    /// # Arguments
     /// * `pattern` - Handshake pattern
     /// * `prologue` - Optional prologue data for the handshake
     /// * `initiator` - True if we are the initiator
@@ -59,11 +59,14 @@ where
     /// * `re` - Peer public ephemeral key - Shouldn't usually be provided manually
     /// * `rng` - RNG to use during the handshake
     ///
-    /// # Generic parameters:
+    /// # Generic parameters
     /// * `EKEM` - KEM algorithm to use for ephemeral key encapsulation
     /// * `SKEM` - KEM algorithm to use for static key encapsulation
     /// * `CIPHER` - Cipher algorithm to use
     /// * `HASH` - Hashing algorithm to use
+    ///
+    /// # Panics
+    /// * Panics if initialized with a NQ pattern
     #[allow(clippy::too_many_arguments)] // Okay for now
     pub fn new(
         pattern: HandshakePattern,

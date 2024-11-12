@@ -40,11 +40,11 @@ where
 {
     /// Initialize a new dual layer handshake
     ///
-    /// # Arguments:
+    /// # Arguments
     /// * `outer` - Outer handshake, which is completed first
     /// * `innter` - Inner handshake, which benefits from the security of the outer layer
     ///
-    /// # Generic parameters:
+    /// # Generic parameters
     /// * `const BUF` - Intermediate decrypt buffer size - Must be large enough to fit all inner handshake messages
     ///
     /// # Panics

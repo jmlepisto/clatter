@@ -6,7 +6,9 @@ use crate::traits::{Cipher, CryptoComponent};
 
 /// Pair of [`CipherState`] instances for sending and receiving transport messages
 pub struct CipherStates<C: Cipher> {
+    /// Cipher for initiator -> responder communication
     pub initiator_to_responder: CipherState<C>,
+    /// Cipher for responder -> initiator communication
     pub responder_to_initiator: CipherState<C>,
 }
 

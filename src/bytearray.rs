@@ -5,12 +5,22 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 /// Simple trait used throughout the codebase to provide
 /// portable array operations
 pub trait ByteArray: Sized + Zeroize + PartialEq + Debug {
+    /// Initialize a new array with zeros
     fn new_zero() -> Self;
+    /// Initialize a new array by filling it with the given element
     fn new_with(_: u8) -> Self;
+    /// Initialize a new array by copying it from the given slice
+    ///
+    /// # Panics
+    /// * Panics if the slice length does not match this array length
     fn from_slice(_: &[u8]) -> Self;
+    /// Array length
     fn len() -> usize;
+    /// Borrow this array as a slice
     fn as_slice(&self) -> &[u8];
+    /// Borrow this array as mutable
     fn as_mut(&mut self) -> &mut [u8];
+    /// Clone this array
     fn clone(&self) -> Self {
         Self::from_slice(self.as_slice())
     }
@@ -21,6 +31,7 @@ pub trait ByteArray: Sized + Zeroize + PartialEq + Debug {
 pub struct SensitiveByteArray<A: ByteArray>(A);
 
 impl<A: ByteArray> SensitiveByteArray<A> {
+    /// Encapsulate the given [`ByteArray`]
     pub fn new(a: A) -> SensitiveByteArray<A> {
         Self(a)
     }

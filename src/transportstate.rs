@@ -10,7 +10,7 @@ use crate::traits::{Cipher, Handshaker, Hash};
 /// form of a [`CipherStates`] struct. Users have raw access
 /// to the keys if needed using the [`Self::take`] method.
 ///
-/// # Sending and receiving messages:
+/// # Sending and receiving messages
 /// * [`Self::send`]
 /// * [`Self::receive`]
 /// * [`Self::send_in_place`]
@@ -40,18 +40,18 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     /// Encrypts data from `msg` and places the resulting ciphertext
     /// in `buf`, returning the total number of bytes written.
     ///
-    /// # Arguments:
+    /// # Arguments
     /// * `msg` - Message buffer to encrypt
     /// * `buf` - Destination buffer to store the encrypted message
     ///
-    /// # Returns:
+    /// # Returns
     /// * Encrypted ytes written to `buf`
     ///
-    /// # Errors:
+    /// # Errors
     /// * [`TransportError::BufferTooSmall`] - Resulting message does not fit in `buf`
     /// * [`TransportError::Cipher`] - Encryption error
     ///
-    /// # Panics:
+    /// # Panics
     /// * If resulting message length exceeds [`MAX_MESSAGE_LEN`]
     pub fn send(&mut self, msg: &[u8], buf: &mut [u8]) -> TransportResult<usize> {
         let out_len = msg.len() + C::tag_len();
@@ -80,18 +80,18 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     /// returning the total number of bytes the resulting
     /// ciphertext takes.
     ///
-    /// # Arguments:
+    /// # Arguments
     /// * `msg` - Message buffer
     /// * `msg_len` - How many bytes from the beginning of `msg` will be encrypted in-place
     ///
-    /// # Returns:
+    /// # Returns
     /// * Encrypted bytes written to `msg`
     ///
-    /// # Errors:
+    /// # Errors
     /// * [`TransportError::BufferTooSmall`] - Resulting message does not fit in `buf`
     /// * [`TransportError::Cipher`] - Encryption error
     ///
-    /// # Panics:
+    /// # Panics
     /// * If resulting message length exceeds [`MAX_MESSAGE_LEN`]
     pub fn send_in_place(&mut self, msg: &mut [u8], msg_len: usize) -> TransportResult<usize> {
         let out_len = msg_len + C::tag_len();
@@ -119,14 +119,14 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     /// Decrypts data from `msg` and places the resulting plaintext
     /// in `buf`, returning the total number of bytes written.
     ///
-    /// # Arguments:
+    /// # Arguments
     /// * `msg` - Received message buffer
     /// * `buf` - Destination buffer to store the decrypted message
     ///
-    /// # Returns:
+    /// # Returns
     /// * Decrypted bytes written to `buf`
     ///
-    /// # Errors:
+    /// # Errors
     /// * [`TransportError::TooShort`] - Provided message `msg` is too short for decryption
     /// * [`TransportError::BufferTooSmall`] - Resulting message does not fit in `buf`
     /// * [`TransportError::Cipher`] - Decryption error
@@ -163,14 +163,14 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     /// returning the total number of byte the resulting
     /// plaintext takes.
     ///
-    /// # Arguments:
+    /// # Arguments
     /// * `msg` - Message buffer
     /// * `msg_len` - How many bytes from the beginning of `msg` will be decrypted in-place
     ///
-    /// # Returns:
+    /// # Returns
     /// * Decrypted bytes written to `msg`
     ///
-    /// # Errors:
+    /// # Errors
     /// * [`TransportError::TooShort`] - Provided message `msg` is too short for decryption
     /// * [`TransportError::BufferTooSmall`] - Resulting message does not fit in `buf`
     /// * [`TransportError::Cipher`] - Decryption error

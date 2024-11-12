@@ -28,6 +28,7 @@ pub enum HandshakeError {
     Transport(#[from] TransportError),
 }
 
+/// Handshake operation result type
 pub type HandshakeResult<T> = Result<T, HandshakeError>;
 
 /// Errors that can happen during transport operations
@@ -41,6 +42,7 @@ pub enum TransportError {
     Cipher(#[from] CipherError),
 }
 
+/// Transport operation result type
 pub type TransportResult<T> = Result<T, TransportError>;
 
 /// Errors that can happen during KEM operations
@@ -56,6 +58,7 @@ pub enum KemError {
     KeyGeneration,
 }
 
+/// KEM operation result type
 pub type KemResult<T> = Result<T, KemError>;
 
 /// Errors that can happen during DH operations
@@ -65,6 +68,7 @@ pub enum DhError {
     KeyGeneration,
 }
 
+/// DH operation result type
 pub type DhResult<T> = Result<T, DhError>;
 
 /// Errors that can happen during Cipher operations
@@ -76,4 +80,5 @@ pub enum CipherError {
     Decrypt,
 }
 
+/// Cipher operation result type
 pub type CipherResult<T> = Result<T, CipherError>;

@@ -5,14 +5,23 @@ use arrayvec::ArrayVec;
 /// Handshake tokens as defined by the Noise spec and PQNoise paper.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Token {
+    /// Initiator ephemeral key
     E,
+    /// Initiator static key
     S,
+    /// Ephemeral-ephemeral DH
     EE,
+    /// Ephemeral-static DH
     ES,
+    /// Static-ephemeral DH
     SE,
+    /// Static-static DH
     SS,
+    /// Ephemeral KEM
     Ekem,
+    /// Static KEM
     Skem,
+    /// Pre-shared key
     Psk,
 }
 
@@ -30,13 +39,19 @@ pub struct HandshakePattern {
     has_psk: bool,
 }
 
+/// Handshake message pattern
+///
+/// Does not include pre-message patterns
 #[derive(Clone, Debug)]
 pub struct MessagePattern {
+    /// Messages sent by the initiator
     pub initiator: ArrayVec<ArrayVec<Token, 8>, 8>,
+    /// Messages sent by the responder
     pub responder: ArrayVec<ArrayVec<Token, 8>, 8>,
 }
 
 impl MessagePattern {
+    /// Check if the pattern includes pre-shared keys
     pub fn has_psk(&self) -> bool {
         self.initiator.iter().flatten().any(|t| *t == Token::Psk)
             || self.responder.iter().flatten().any(|t| *t == Token::Psk)
@@ -46,7 +61,7 @@ impl MessagePattern {
 impl HandshakePattern {
     /// Initialize a new handshake pattern
     ///
-    /// # Arguments:
+    /// # Arguments
     /// * `name` - Pattern name
     /// * `pre_initiator` - Tokens shared by initiator pre handshake
     /// * `pre_responder` - Tokens shared by responder pre handshake

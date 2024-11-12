@@ -1,4 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![warn(missing_docs)]
+#![warn(clippy::missing_panics_doc)]
 //! # Clatter 🔊
 //!
 //! ⚠️ **Work in progress** ⚠️
@@ -186,6 +188,8 @@ pub mod crypto {
 /// A zeroize-on-drop container for keys
 #[derive(ZeroizeOnDrop, Clone)]
 pub struct KeyPair<P: Zeroize, S: Zeroize> {
+    /// Public key
     pub public: P,
+    /// Secret (private) key
     pub secret: S,
 }

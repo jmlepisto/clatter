@@ -21,22 +21,31 @@ pub trait CryptoComponent {
 
 /// Common trait for all Diffie-Hellman algorithms
 pub trait Dh: CryptoComponent {
-    type Key: ByteArray;
+    /// Private key type
+    type PrivateKey: ByteArray;
+    /// Public key type
     type PubKey: ByteArray;
+    /// DH output type
     type Output: ByteArray;
 
     /// Generate private key
-    fn genkey<R: RngCore + CryptoRng>(rng: &mut R) -> DhResult<KeyPair<Self::PubKey, Self::Key>>;
+    fn genkey<R: RngCore + CryptoRng>(
+        rng: &mut R,
+    ) -> DhResult<KeyPair<Self::PubKey, Self::PrivateKey>>;
 
     /// Perform DH key exchange
-    fn dh(_: &Self::Key, _: &Self::PubKey) -> DhResult<Self::Output>;
+    fn dh(_: &Self::PrivateKey, _: &Self::PubKey) -> DhResult<Self::Output>;
 }
 
 /// Common trait for all key encapsulation mechanisms
 pub trait Kem: CryptoComponent {
+    /// Secret key type
     type SecretKey: ByteArray;
+    /// Public key type
     type PubKey: ByteArray;
+    /// Ciphertext type
     type Ct: ByteArray;
+    /// Shared secret type
     type Ss: ByteArray;
 
     /// Generate a keypair
@@ -56,7 +65,9 @@ pub trait Kem: CryptoComponent {
 
 /// Common trait for all hash algorithms
 pub trait Hash: CryptoComponent + Default {
+    /// Hash block type
     type Block: ByteArray;
+    /// Hash output type
     type Output: ByteArray;
 
     /// Hash block length
@@ -140,6 +151,7 @@ pub trait Hash: CryptoComponent + Default {
 
 /// Common trait for all cipher algorithms
 pub trait Cipher: CryptoComponent {
+    /// Cipher key type
     type Key: ByteArray;
 
     /// Key length
@@ -260,21 +272,21 @@ where
 {
     /// Write next handshake message to the given buffer
     ///
-    /// # Arguments:
+    /// # Arguments
     /// * `payload` - payload to include in the handshake message
     /// * `out` - destination buffer to write the handshake message to
     ///
-    /// # Returns:
+    /// # Returns
     /// Number of bytes written to destination buffer
     ///
-    /// # Errors:
+    /// # Errors
     /// * [`HandshakeError::ErrorState`] - Handshaker encountered an error before and cannot be used anymore
     /// * [`HandshakeError::InvalidState`] - Handshaker is not in receive state
     /// * [`HandshakeError::BufferTooSmall`] - Message does not fit into provided destination buffer
     /// * [`HandshakeError::Dh`] - DH error
     /// * [`HandshakeError::Cipher`] - Encryption error
     ///
-    /// # Panics:
+    /// # Panics
     /// If resulting message length is larger than [`crate::constants::MAX_MESSAGE_LEN`]
     fn write_message(&mut self, payload: &[u8], out: &mut [u8]) -> HandshakeResult<usize> {
         if self.status() == HandshakeStatus::Error {
@@ -306,14 +318,14 @@ where
 
     /// Read and process next handshake message from given buffer
     ///
-    /// # Arguments:
+    /// # Arguments
     /// * `message` - handshake message
     /// * `out` - destination buffer to write the handshake payload
     ///
-    /// # Returns:
+    /// # Returns
     /// Number of payload bytes written to destination buffer
     ///
-    /// # Errors:
+    /// # Errors
     /// * [`HandshakeError::ErrorState`] - Handshaker encountered an error before and cannot be used anymore
     /// * [`HandshakeError::InvalidState`] - Handshaker is not in receive state
     /// * [`HandshakeError::InvalidMessage`] - Input does not match the next expected message
@@ -321,7 +333,7 @@ where
     /// * [`HandshakeError::Dh`] - DH error
     /// * [`HandshakeError::Cipher`] - Decryption error
     ///
-    /// # Panics:
+    /// # Panics
     /// * If message length is larger than [`crate::constants::MAX_MESSAGE_LEN`]
     fn read_message(&mut self, message: &[u8], out: &mut [u8]) -> HandshakeResult<usize> {
         if message.len() > MAX_MESSAGE_LEN {
@@ -357,7 +369,7 @@ where
 
     /// Push a PSK to the PSK queue
     ///
-    /// # Panics:
+    /// # Panics
     ///  * If the PSK is not [`crate::constants::PSK_LEN`] bytes
     ///  * If the PSK queue becomes larger than [`crate::constants::MAX_PSKS`]
     fn push_psk(&mut self, psk: &[u8]);

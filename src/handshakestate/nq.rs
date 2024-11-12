@@ -25,7 +25,8 @@ where
 {
     // Internal, we can live with this
     #[allow(clippy::type_complexity)]
-    internals: HandshakeInternals<'a, C, H, RNG, DH::Key, DH::PubKey, DH::Key, DH::PubKey>,
+    internals:
+        HandshakeInternals<'a, C, H, RNG, DH::PrivateKey, DH::PubKey, DH::PrivateKey, DH::PubKey>,
 }
 
 impl<'a, DH, CIPHER, HASH, RNG> NqHandshake<'a, DH, CIPHER, HASH, RNG>
@@ -37,7 +38,7 @@ where
 {
     /// Initialize new non-post-quantum handshake
     ///
-    /// # Arguments:
+    /// # Arguments
     /// * `pattern` - Handshake pattern
     /// * `prologue` - Optional prologue data for the handshake
     /// * `initiator` - True if we are the initiator
@@ -47,17 +48,20 @@ where
     /// * `re` - Peer public ephemeral key - Shouldn't usually be provided manually
     /// * `rng` - RNG to use during the handshake
     ///
-    /// # Generic parameters:
+    /// # Generic parameters
     /// * `DH` - DH algorithm to use
     /// * `CIPHER` - Cipher algorithm to use
     /// * `HASH` - Hashing algorithm to use
+    ///
+    /// # Panics
+    /// * Panics if initialized with a PQ pattern
     #[allow(clippy::too_many_arguments)] // Okay for now
     pub fn new(
         pattern: HandshakePattern,
         prologue: &[u8],
         initiator: bool,
-        s: Option<KeyPair<DH::PubKey, DH::Key>>,
-        e: Option<KeyPair<DH::PubKey, DH::Key>>,
+        s: Option<KeyPair<DH::PubKey, DH::PrivateKey>>,
+        e: Option<KeyPair<DH::PubKey, DH::PrivateKey>>,
         rs: Option<DH::PubKey>,
         re: Option<DH::PubKey>,
         rng: &'a mut RNG,
@@ -168,7 +172,7 @@ where
     }
 
     fn dh(
-        a: Option<&KeyPair<DH::PubKey, DH::Key>>,
+        a: Option<&KeyPair<DH::PubKey, DH::PrivateKey>>,
         b: Option<&DH::PubKey>,
     ) -> HandshakeResult<DH::Output> {
         let a = a.ok_or(HandshakeError::MissingMaterial)?;
