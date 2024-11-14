@@ -30,6 +30,11 @@ impl Dh for X25519 {
         })
     }
 
+    fn pubkey(k: &Self::PrivateKey) -> Self::PubKey {
+        let public = PublicKey::from(&StaticSecret::from(**k));
+        Self::PubKey::from_slice(public.as_bytes())
+    }
+
     fn dh(k: &Self::PrivateKey, pk: &Self::PubKey) -> crate::error::DhResult<Self::Output> {
         let k = StaticSecret::from(**k);
         let pk = PublicKey::from(*pk);

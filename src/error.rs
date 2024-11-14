@@ -38,6 +38,8 @@ pub enum TransportError {
     BufferTooSmall,
     /// Received too short message for decryption
     TooShort,
+    /// Tried to encrypt/decrypt data in the wrong direction after a one-way handshake
+    OneWayViolation,
     /// Cipher error: {0}
     Cipher(#[from] CipherError),
 }

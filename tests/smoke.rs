@@ -205,8 +205,14 @@ fn nq_handshake<DH: Dh, C: Cipher, H: Hash>(pattern: HandshakePattern) {
         .send(b"Scream without a sound", &mut alice_buf)
         .unwrap();
     let n = bob.receive(&alice_buf[..n], &mut bob_buf).unwrap();
-
     assert_eq!(bob_buf[..n], *b"Scream without a sound");
+
+    let mut in_place_buf = [0; 4096];
+    let msg = b"Flying off the handle";
+    in_place_buf[..msg.len()].copy_from_slice(msg);
+    let n = alice.send_in_place(&mut in_place_buf, msg.len()).unwrap();
+    let n = bob.receive_in_place(&mut in_place_buf, n).unwrap();
+    assert_eq!(in_place_buf[..n], *msg);
 }
 
 fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePattern) {
@@ -277,4 +283,11 @@ fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePatt
     let n = bob.receive(&alice_buf[..n], &mut bob_buf).unwrap();
 
     assert_eq!(bob_buf[..n], *b"Find I've come full circle");
+
+    let mut in_place_buf = [0; 4096];
+    let msg = b"This story ends where it began";
+    in_place_buf[..msg.len()].copy_from_slice(msg);
+    let n = alice.send_in_place(&mut in_place_buf, msg.len()).unwrap();
+    let n = bob.receive_in_place(&mut in_place_buf, n).unwrap();
+    assert_eq!(in_place_buf[..n], *msg);
 }

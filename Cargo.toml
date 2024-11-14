@@ -1,6 +1,6 @@
 [package]
 name = "clatter"
-version = "0.1.4-alpha"
+version = "1.0.0-rc.1"
 edition = "2021"
 license = "MIT"
 description = "no_std compatible implementation of Noise protocol framework with Post-Quantum extensions"
@@ -53,6 +53,12 @@ use-argyle-kyber768 = ["pqc_kyber"]
 use-argyle-kyber1024 = ["pqc_kyber/kyber1024"]
 use-25519 = ["x25519-dalek"]
 
+# docs.rs-specific configuration
+[package.metadata.docs.rs]
+# document all features
+all-features = true
+# defines the configuration attribute `docsrs`
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 # Mandatory
@@ -77,4 +83,4 @@ displaydoc = { version = "0.2.5", default-features = false }
 rand = "0.8.5"
 
 [workspace]
-members = ["fuzz"]
+members = ["fuzz", "vectors"]

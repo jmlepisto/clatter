@@ -5,8 +5,6 @@
 [![GitHub branch check runs](https://img.shields.io/github/check-runs/jmlepisto/clatter/main?style=flat-square)](https://github.com/jmlepisto/clatter/actions)
 
 
-⚠️ **Work in progress** ⚠️
-
 `no_std` compatible, pure Rust implementation of the [**Noise protocol framework**](https://noiseprotocol.org/noise.html)
 with support for [**Post Quantum (PQ) extensions**](https://doi.org/10.1145/3548606.3560577) as presented by
 Yawning Angel, Benjamin Dowling, Andreas Hülsing, Peter Schwabe, and Fiona Johanna Weber.
@@ -26,6 +24,18 @@ huge thanks to the developers for their effort!
 
 * This library has not received any formal audit
 * While we enable some cryptographic providers by default, it is up to **you** to get familiar with those and decide if they meet your security and integrity requirements
+* Post-Quantum cryptography generally is not as established and mature as classical cryptography. Users are encouraged to implement hybrid encryption schemes with classical
+crypto primitives incorporated to provide additional security in case of a catastrophic flaw in the post-quantum algorithms.
+Clatter provides [`DualLayerHandshake`](https://docs.rs/clatter/latest/clatter/struct.DualLayerHandshake.html) for this purpose.
+
+## Noise Protocol
+
+This crate tracks Noise protocol framework **revision 34**. As of now we omit support for the following features:
+
+* Handshake pattern parsing support - Handshakes have to instantiated with the correct primitives compile-time
+* Curve 448 DH support - No suitable Rust implementation exists for our requirements
+* Deferred pattern support - can be implemented by the user
+* Fallback pattern support - Can be implemented by the user
 
 ## Basics
 
@@ -153,6 +163,12 @@ similar level of secrecy. This crate provides a safe Rust based implementation f
 handshakes proposed by PQNoise - so that we can keep on benefitting from the clarity and formal
 security guarantees of Noise even in post-quantum era.
 
+## PQ Handshake Notation
+
+Noise uses a simple pattern language for defining the handshake patterns. PQ patterns follow these same
+rules, only substituting DH tokens with `ekem` and `skem` operations, which indicate sending of a ciphertext
+that was encapsulated to the ephemeral/static key of the receiving party.
+
 ## Differences to PQNoise paper
 
 * PQNoise presents the possibility to use different KEMs for ephemeral, initiator, and responder.
@@ -167,17 +183,5 @@ does not currently implement *SEEC*.
 * ~~Add support for all crypto algorithms listed in Noise spec~~, no compatible X448 implementation exists
 * ~~Add support for all fundamental Noise patterns (one-way patterns missing)~~
 * ~~More KEMs with ability to configure the desired vendor~~
-* Proper testing and fuzzing
-* Better documentation
-* Intuitive Noise pattern parser with `alloc`feature
-
-## Some Coding Quidelines..
-
-Let's be the cleanest Noise Rust implementation there is :)
-
-* `no_std` compatibility required at all times
-* No Clippy warnings allowed - ignores allowed only when absolutely justified
-* Good hygiene expected:
-    * Check for integer overflows
-    * Zeroize sensitive assets on drop
-
+* ~~Proper testing and fuzzing~~
+* ~~Better documentation~~

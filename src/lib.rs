@@ -1,11 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![warn(missing_docs)]
 #![warn(clippy::missing_panics_doc)]
+// only enables the `doc_cfg` feature when
+// the `docsrs` configuration attribute is defined
+#![cfg_attr(docsrs, feature(doc_cfg))]
 //! # Clatter 🔊
 //!
-//! ⚠️ **Work in progress** ⚠️
-//!
-//! `no_std` compatible, pure Rust implementation of the [Noise framework](https://noiseprotocol.org/noise.html)
+//! `no_std` compatible, pure Rust implementation of the [**Noise framework**](https://noiseprotocol.org/noise.html)
 //! with support for [**Post Quantum (PQ) extensions**](https://doi.org/10.1145/3548606.3560577) as presented by
 //! Yawning Angel, Benjamin Dowling, Andreas Hülsing, Peter Schwabe, and Fiona Johanna Weber.
 //!
@@ -31,15 +32,16 @@
 //!
 //! ## Handshake Patterns
 //!
-//! *Interactive* Noise and PQNoise patterns are available pre-made in the [`handshakepattern`] module.
+//! Selected fundamental Noise and PQNoise patterns are available pre-made in the [`handshakepattern`] module.
+//! Utilities in that module can also be used to craft additional handshake patterns.
 //!
 //! ## Crypto Vendors
 //!
 //! Currently Clatter has frozen the vendor selection for DH, Cipher and Hash algorithms, but users
 //! can select from multiple KEM vendors.
 //!
-//! Concrete implementations of the crypto algorithms are in the [`crypto`] module and users can even
-//! use their own implementations using the definitions in the [`traits`] module.
+//! Concrete implementations of the crypto algorithms are in the [`crypto`] module and it is even
+//! possible to use custom implementations using the definitions in the [`traits`] module.
 //!
 //! ## Features
 //!
@@ -154,32 +156,53 @@ pub mod crypto {
 
     /// Supported KEMs
     pub mod kem {
+        /// Kyber implementation by Argyle-Software
+        ///
+        /// Can be enabled by setting ONE of the following feautres:
+        /// * `use-argyle-kyber512`
+        /// * `use-argyle-kyber768`
+        /// * `use-argyle-kyber1024`
         #[cfg(feature = "pqc_kyber")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "pqc_kyber")))]
         pub use crate::crypto_impl::argyle_software_kyber;
+        /// Kyber implementation by PQClean project
+        #[cfg_attr(docsrs, doc(cfg(feature = "use-pqclean-kyber")))]
         #[cfg(feature = "use-pqclean-kyber")]
         pub use crate::crypto_impl::pqclean_kyber;
+        /// Kyber implementation by RustCrypto
+        #[cfg_attr(docsrs, doc(cfg(feature = "use-rust-crypto-kyber")))]
         #[cfg(feature = "use-rust-crypto-kyber")]
         pub use crate::crypto_impl::rust_crypto_kyber;
     }
 
     /// Supported DH algorithms
     pub mod dh {
+        /// X25519 implementation by RustCrypto
+        #[cfg_attr(docsrs, doc(cfg(feature = "use-25519")))]
         #[cfg(feature = "use-25519")]
         pub use crate::crypto_impl::x25519::X25519;
     }
 
     /// Supported cipher algorithms
     pub mod cipher {
+        /// AES-GCM implementation by RustCrypto
+        #[cfg_attr(docsrs, doc(cfg(feature = "use-aes-gcm")))]
         #[cfg(feature = "use-aes-gcm")]
         pub use crate::crypto_impl::aes::AesGcm;
+        /// ChaCha20-Poly1305 implementation by RustCrypto
+        #[cfg_attr(docsrs, doc(cfg(feature = "use-chacha20poly1305")))]
         #[cfg(feature = "use-chacha20poly1305")]
         pub use crate::crypto_impl::chacha::ChaChaPoly;
     }
 
     /// Supported hash algorithms
     pub mod hash {
+        /// BLAKE hash implementations by RustCrypto
+        #[cfg_attr(docsrs, doc(cfg(feature = "use-blake2")))]
         #[cfg(feature = "use-blake2")]
         pub use crate::crypto_impl::blake2::{Blake2b, Blake2s};
+        /// SHA hash implementations by RustCrypto
+        #[cfg_attr(docsrs, doc(cfg(feature = "use-sha")))]
         #[cfg(feature = "use-sha")]
         pub use crate::crypto_impl::sha::{Sha256, Sha512};
     }

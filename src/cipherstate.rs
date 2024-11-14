@@ -198,11 +198,7 @@ mod tests {
         c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
             .unwrap();
         assert!(c2
-            .decrypt_with_ad(
-                b"Close your eyes and relax",
-                &c1_buf[..cipher_len],
-                &mut c2_buf[..msg.len()]
-            )
+            .decrypt_with_ad(&[], &c1_buf[..cipher_len], &mut c2_buf[..msg.len()])
             .is_err());
 
         // Restore nonce

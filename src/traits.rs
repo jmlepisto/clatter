@@ -28,10 +28,13 @@ pub trait Dh: CryptoComponent {
     /// DH output type
     type Output: ByteArray;
 
-    /// Generate private key
+    /// Generate a keypair
     fn genkey<R: RngCore + CryptoRng>(
         rng: &mut R,
     ) -> DhResult<KeyPair<Self::PubKey, Self::PrivateKey>>;
+
+    /// Extract public key from given private key
+    fn pubkey(k: &Self::PrivateKey) -> Self::PubKey;
 
     /// Perform DH key exchange
     fn dh(_: &Self::PrivateKey, _: &Self::PubKey) -> DhResult<Self::Output>;

@@ -40,7 +40,7 @@ impl Cipher for AesGcm {
             .map_or(false, |len| len <= in_out.len()));
 
         let mut full_nonce = [0u8; 12];
-        full_nonce[4..].copy_from_slice(&nonce.to_le_bytes());
+        full_nonce[4..].copy_from_slice(&nonce.to_be_bytes());
 
         let out_len = plaintext_len + Self::tag_len();
         let (buffer, tag_out) = in_out[..out_len].split_at_mut(plaintext_len);
@@ -63,7 +63,7 @@ impl Cipher for AesGcm {
         assert!(ciphertext.len().checked_sub(Self::tag_len()) == Some(out.len()));
 
         let mut full_nonce = [0u8; 12];
-        full_nonce[4..].copy_from_slice(&nonce.to_le_bytes());
+        full_nonce[4..].copy_from_slice(&nonce.to_be_bytes());
 
         out.copy_from_slice(&ciphertext[..out.len()]);
         let tag = &ciphertext[out.len()..];
@@ -86,7 +86,7 @@ impl Cipher for AesGcm {
         assert!(ciphertext_len >= Self::tag_len());
 
         let mut full_nonce = [0u8; 12];
-        full_nonce[4..].copy_from_slice(&nonce.to_le_bytes());
+        full_nonce[4..].copy_from_slice(&nonce.to_be_bytes());
 
         let (buffer, tag) = in_out[..ciphertext_len].split_at_mut(ciphertext_len - 16);
 

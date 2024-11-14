@@ -3,6 +3,7 @@ use sha2::Digest;
 use crate::traits::{CryptoComponent, Hash};
 
 /// SHA-512 hasher implementation
+#[derive(Default)]
 pub struct Sha512(sha2::Sha512);
 
 impl CryptoComponent for Sha512 {
@@ -24,18 +25,13 @@ impl Hash for Sha512 {
     }
 }
 
-impl Default for Sha512 {
-    fn default() -> Self {
-        Self(sha2::Sha512::new())
-    }
-}
-
 /// SHA-256 hasher implementation
+#[derive(Default)]
 pub struct Sha256(sha2::Sha256);
 
 impl CryptoComponent for Sha256 {
     fn name() -> &'static str {
-        "SHA5256"
+        "SHA256"
     }
 }
 
@@ -49,11 +45,5 @@ impl Hash for Sha256 {
 
     fn result(self) -> Self::Output {
         self.0.finalize().into()
-    }
-}
-
-impl Default for Sha256 {
-    fn default() -> Self {
-        Self(sha2::Sha256::new())
     }
 }

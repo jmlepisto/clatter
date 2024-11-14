@@ -130,11 +130,6 @@ impl HandshakePattern {
         &self.message_pattern.responder[index]
     }
 
-    /// Get name of the pattern
-    pub(crate) fn get_name(&self) -> &'static str {
-        self.name
-    }
-
     /// Check if the pattern includes KEM
     pub(crate) fn is_kem(&self) -> bool {
         self.is_kem
@@ -143,6 +138,16 @@ impl HandshakePattern {
     /// Check if the pattern includes PSKs
     pub(crate) fn has_psk(&self) -> bool {
         self.has_psk
+    }
+
+    /// Get name of the pattern
+    pub fn get_name(&self) -> &'static str {
+        self.name
+    }
+
+    /// Check if the pattern is one way
+    pub fn is_one_way(&self) -> bool {
+        self.message_pattern.responder.is_empty()
     }
 
     /// Insert PSK's to the message pattern at given positions, `psks`
@@ -573,7 +578,7 @@ pub fn noise_n() -> HandshakePattern {
 pub fn noise_k() -> HandshakePattern {
     HandshakePattern::new(
         "K",
-        &[],
+        &[Token::S],
         &[Token::S],
         &[&[Token::E, Token::ES, Token::SS]],
         &[],

@@ -2,6 +2,7 @@ use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;
 use crate::constants::MAX_MESSAGE_LEN;
 use crate::error::{HandshakeError, HandshakeResult, TransportError, TransportResult};
+use crate::handshakepattern::HandshakePattern;
 use crate::traits::{Cipher, Handshaker, Hash};
 
 /// Transport state used after a successful handshake
@@ -16,6 +17,7 @@ use crate::traits::{Cipher, Handshaker, Hash};
 /// * [`Self::send_in_place`]
 /// * [`Self::receive_in_place`]
 pub struct TransportState<C: Cipher, H: Hash> {
+    pattern: HandshakePattern,
     cipherstates: CipherStates<C>,
     h: H::Output,
     initiator: bool,
@@ -29,6 +31,7 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
         }
 
         Ok(TransportState {
+            pattern: hs.get_pattern(),
             cipherstates: hs.get_ciphers(),
             h: hs.get_hash(),
             initiator: hs.is_initiator(),
@@ -50,6 +53,7 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     /// # Errors
     /// * [`TransportError::BufferTooSmall`] - Resulting message does not fit in `buf`
     /// * [`TransportError::Cipher`] - Encryption error
+    /// * [`TransportError::OneWayViolation`] - Tried to send data as responder after a one-way handshake
     ///
     /// # Panics
     /// * If resulting message length exceeds [`MAX_MESSAGE_LEN`]
@@ -62,6 +66,10 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
 
         if buf.len() < out_len {
             return Err(TransportError::BufferTooSmall);
+        }
+
+        if self.pattern.is_one_way() && !self.initiator {
+            return Err(TransportError::OneWayViolation);
         }
 
         let c = if self.initiator {
@@ -90,6 +98,7 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     /// # Errors
     /// * [`TransportError::BufferTooSmall`] - Resulting message does not fit in `buf`
     /// * [`TransportError::Cipher`] - Encryption error
+    /// * [`TransportError::OneWayViolation`] - Tried to send data as responder after a one-way handshake
     ///
     /// # Panics
     /// * If resulting message length exceeds [`MAX_MESSAGE_LEN`]
@@ -102,6 +111,10 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
 
         if msg.len() < out_len {
             return Err(TransportError::BufferTooSmall);
+        }
+
+        if self.pattern.is_one_way() && !self.initiator {
+            return Err(TransportError::OneWayViolation);
         }
 
         let c = if self.initiator {
@@ -130,6 +143,7 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     /// * [`TransportError::TooShort`] - Provided message `msg` is too short for decryption
     /// * [`TransportError::BufferTooSmall`] - Resulting message does not fit in `buf`
     /// * [`TransportError::Cipher`] - Decryption error
+    /// * [`TransportError::OneWayViolation`] - Tried to receive data as initiator after a one-way handshake
     ///
     /// # Panics
     /// * If message length exceeds [`MAX_MESSAGE_LEN`]
@@ -145,6 +159,10 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
         let out_len = msg.len() - C::tag_len();
         if buf.len() < out_len {
             return Err(TransportError::BufferTooSmall);
+        }
+
+        if self.pattern.is_one_way() && self.initiator {
+            return Err(TransportError::OneWayViolation);
         }
 
         let c = if self.initiator {
@@ -174,6 +192,7 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     /// * [`TransportError::TooShort`] - Provided message `msg` is too short for decryption
     /// * [`TransportError::BufferTooSmall`] - Resulting message does not fit in `buf`
     /// * [`TransportError::Cipher`] - Decryption error
+    /// * [`TransportError::OneWayViolation`] - Tried to receive data as initiator after a one-way handshake
     ///
     /// # Panics
     /// * If message length exceeds [`MAX_MESSAGE_LEN`]
@@ -188,6 +207,10 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
 
         if msg_len > msg.len() {
             return Err(TransportError::BufferTooSmall);
+        }
+
+        if self.pattern.is_one_way() && self.initiator {
+            return Err(TransportError::OneWayViolation);
         }
 
         let c = if self.initiator {
