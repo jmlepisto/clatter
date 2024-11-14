@@ -1,6 +1,6 @@
 [package]
 name = "clatter"
-version = "1.0.0-rc.1"
+version = "1.0.0-rc.2"
 edition = "2021"
 license = "MIT"
 description = "no_std compatible implementation of Noise protocol framework with Post-Quantum extensions"
@@ -61,8 +61,6 @@ use-25519 = ["x25519-dalek"]
 
 # docs.rs-specific configuration
 [package.metadata.docs.rs]
-# document all features
-all-features = true
 # defines the configuration attribute `docsrs`
 rustdoc-args = ["--cfg", "docsrs"]
 
