@@ -21,6 +21,12 @@ categories = [
     "algorithms",
 ]
 
+exclude = [
+    "vectors/*",
+    ".github/*",
+    "tests/*",
+]
+
 [features]
 default = [
     "use-aes-gcm", 
