@@ -88,17 +88,24 @@
 //! ).unwrap();
 //!
 //! let mut buf_alice_send = [0u8; 4096];
-//! let mut buf_alice_receive = [0u8; 4096];
 //!
-//! // Write handshake message and deliver to peer
-//! let n = alice.write_message(&[], &mut buf_alice_send).unwrap();
-//! // --> Send &buf_alice_send[..n]) to peer
+//! // Send and receive handshake messages until the handshake is completed
+//! loop {
+//!     if alice.is_write_turn() {
+//!         // Write handshake message to buf_alice_send
+//!         let n = alice.write_message(&[], &mut buf_alice_send).unwrap();
+//!         // --> Deliver buf_alice_send[..n] to peer
+//!     } else {
+//!         // <-- Receive message from peer to &buf_alice_receive
+//!         let buf_alice_receive = [0u8];
+//!         // Process received handshake message
+//!         let _ = alice.read_message(&buf_alice_receive, &mut[]).unwrap();
+//!     }
 //!
-//! // Receive handshake message and process it
-//! // <-- Receive message from peer to &buf_alice_receive
-//! let _ = alice.read_message(&buf_alice_receive[..n], &mut[]).unwrap();
-//!
-//! assert!(alice.is_finished());
+//!     if alice.is_finished() {
+//!         break;
+//!     }
+//! }
 //!
 //! // Move to transport state
 //! let mut alice = alice.finalize().unwrap();
