@@ -60,6 +60,7 @@ use-25519 = ["x25519-dalek"]
 
 # docs.rs-specific configuration
 [package.metadata.docs.rs]
+all-features = true
 # defines the configuration attribute `docsrs`
 rustdoc-args = ["--cfg", "docsrs"]
 
