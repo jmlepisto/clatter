@@ -34,7 +34,7 @@ This crate tracks Noise protocol framework **revision 34**. As of now we omit su
 
 * Handshake pattern parsing support - Handshakes have to be instantiated with the correct primitives compile-time
 * Curve 448 DH support - No suitable Rust implementation exists for our requirements
-* Deferred pattern support - can be implemented by the user
+* Deferred pattern support - Can be implemented by the user
 * Fallback pattern support - Can be implemented by the user
 
 ## Basics
