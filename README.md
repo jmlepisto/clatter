@@ -192,3 +192,18 @@ Caltter is verified by:
 * [Cacophony](https://github.com/haskell-cryptography/cacophony) and [Snow](https://github.com/mcginty/snow) test vectors
     * Supported pre-made handshake patterns verified
     * Test harness in [vectors/](vectors/)
+
+## Roadmap
+
+Planned features:
+
+* Dedicated `TransportState` variant for unreliable transport protocols (UDP)
+    * Some form of encryption nonce `n` would be delivered along the transport message
+    * Receiving party would validate the nonce and use it to decrypt the message
+    * This would provide (more) robust transport in case of dropped or out-of-order messages
+* Built-in support for more KEM variants
+* Benchmarking and optimization
+
+## Changelog
+
+Please see the [releases](https://github.com/jmlepisto/clatter/releases) page
