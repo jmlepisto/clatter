@@ -48,20 +48,17 @@
 //! To improve build times and produce more optimized binaries, Clatter can be heavily configured by
 //! enabling and disabling crate features. Below is a listing of the available features:
 //!
-//! | Feature flag              | Description                               | Default   | Details                               |
-//! | ---                       | ---                                       | ---       | ---                                   |
-//! | `use-25519`               | Enable X25519 DH                          | yes       |                                       |
-//! | `use-aes-gcm`             | Enable AES-GCM cipher                     | yes       |                                       |
-//! | `use-chacha20poly1305`    | Enable ChaCha20-Poly1305 cipher           | yes       |                                       |
-//! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing        | yes       |                                       |
-//! | `use-blake2`              | Enable BLAKE2 hashing                     | yes       |                                       |
-//! | `use-rust-crypto-kyber`   | Enable Kyber KEMs by RustCrypto           | yes       |                                       |
-//! | `use-pqclean-kyber`       | Enable Kyber KEMs by PQClean              | yes       |                                       |
-//! | `use-argyle-kyber512`     | Eable Kyber512 KEM by Argyle-Software     | no        |                                       |
-//! | `use-argyle-kyber768`     | Eable Kyber768 KEM by Argyle-Software     | no        |                                       |
-//! | `use-argyle-kyber1024`    | Eable Kyber1024 KEM by Argyle-Software    | no        |                                       |
-//! | `std`                     | Enable standard library support           | no        | Currently only affects dependencies   |
-//! | `alloc`                   | Enable allocator support                  | no        | Reserved for future use               |
+//! | Feature flag              | Description                               | Default   | Details                                   |
+//! | ---                       | ---                                       | ---       | ---                                       |
+//! | `use-25519`               | Enable X25519 DH                          | yes       |                                           |
+//! | `use-aes-gcm`             | Enable AES-GCM cipher                     | yes       |                                           |
+//! | `use-chacha20poly1305`    | Enable ChaCha20-Poly1305 cipher           | yes       |                                           |
+//! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing        | yes       |                                           |
+//! | `use-blake2`              | Enable BLAKE2 hashing                     | yes       |                                           |
+//! | `use-rust-crypto-kyber`   | Enable Kyber KEMs by RustCrypto           | yes       |                                           |
+//! | `use-pqclean-kyber`       | Enable Kyber KEMs by PQClean              | yes       |                                           |
+//! | `std`                     | Enable standard library support           | no        | Enables `std` for supported dependencies  |
+//! | `alloc`                   | Enable allocator support                  | no        |                                           |
 //!
 //! ## Example
 //!
@@ -112,29 +109,18 @@
 //! // --> Send &buf_alice_send[..n]) to peer
 //! ```
 
-// Not really used for now
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-/// Internally used array-like datatype
 pub mod bytearray;
-/// Cipherstate implementation
 pub mod cipherstate;
-/// Protocol related constants
 pub mod constants;
-/// Concrete crypto implementations
 mod crypto_impl;
-/// Crate error definitions
 pub mod error;
-/// Pre-made handshake patterns and related utilities
 pub mod handshakepattern;
-/// Handshakestate implementation
 mod handshakestate;
-/// Symmetricstate implementation
 mod symmetricstate;
-/// Common traits for supporting crypto algorithms
 pub mod traits;
-/// Transportstate implementation
 pub mod transportstate;
 
 pub use handshakestate::dual_layer::DualLayerHandshake;
@@ -143,33 +129,14 @@ pub use handshakestate::pq::PqHandshake;
 pub use traits::Handshaker;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-// Argyle Kyber is implemented in a way that it can only provide one of these variants
-#[cfg(any(
-    all(feature = "use-argyle-kyber512", feature = "use-argyle-kyber768"),
-    all(feature = "use-argyle-kyber512", feature = "use-argyle-kyber1024"),
-    all(feature = "use-argyle-kyber768", feature = "use-argyle-kyber1024"),
-))]
-compile_error!("Only one use-argyle-kyber* can be enabled");
-
 /// Concrete crypto implementations
 pub mod crypto {
 
     /// Supported KEMs
     pub mod kem {
-        /// Kyber implementation by Argyle-Software
-        ///
-        /// Can be enabled by setting ONE of the following feautres:
-        /// * `use-argyle-kyber512`
-        /// * `use-argyle-kyber768`
-        /// * `use-argyle-kyber1024`
-        #[cfg(feature = "pqc_kyber")]
-        #[cfg_attr(docsrs, doc(cfg(feature = "pqc_kyber")))]
-        pub use crate::crypto_impl::argyle_software_kyber;
-        /// Kyber implementation by PQClean project
         #[cfg_attr(docsrs, doc(cfg(feature = "use-pqclean-kyber")))]
         #[cfg(feature = "use-pqclean-kyber")]
         pub use crate::crypto_impl::pqclean_kyber;
-        /// Kyber implementation by RustCrypto
         #[cfg_attr(docsrs, doc(cfg(feature = "use-rust-crypto-kyber")))]
         #[cfg(feature = "use-rust-crypto-kyber")]
         pub use crate::crypto_impl::rust_crypto_kyber;
@@ -177,7 +144,6 @@ pub mod crypto {
 
     /// Supported DH algorithms
     pub mod dh {
-        /// X25519 implementation by RustCrypto
         #[cfg_attr(docsrs, doc(cfg(feature = "use-25519")))]
         #[cfg(feature = "use-25519")]
         pub use crate::crypto_impl::x25519::X25519;
@@ -185,11 +151,9 @@ pub mod crypto {
 
     /// Supported cipher algorithms
     pub mod cipher {
-        /// AES-GCM implementation by RustCrypto
         #[cfg_attr(docsrs, doc(cfg(feature = "use-aes-gcm")))]
         #[cfg(feature = "use-aes-gcm")]
         pub use crate::crypto_impl::aes::AesGcm;
-        /// ChaCha20-Poly1305 implementation by RustCrypto
         #[cfg_attr(docsrs, doc(cfg(feature = "use-chacha20poly1305")))]
         #[cfg(feature = "use-chacha20poly1305")]
         pub use crate::crypto_impl::chacha::ChaChaPoly;
@@ -197,11 +161,9 @@ pub mod crypto {
 
     /// Supported hash algorithms
     pub mod hash {
-        /// BLAKE hash implementations by RustCrypto
         #[cfg_attr(docsrs, doc(cfg(feature = "use-blake2")))]
         #[cfg(feature = "use-blake2")]
         pub use crate::crypto_impl::blake2::{Blake2b, Blake2s};
-        /// SHA hash implementations by RustCrypto
         #[cfg_attr(docsrs, doc(cfg(feature = "use-sha")))]
         #[cfg(feature = "use-sha")]
         pub use crate::crypto_impl::sha::{Sha256, Sha512};

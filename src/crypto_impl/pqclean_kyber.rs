@@ -37,9 +37,22 @@ impl CryptoComponent for Kyber1024 {
 macro_rules! impl_kyber {
     ($kyber:ty, $module:ident) => {
         impl Kem for $kyber {
+            #[cfg(feature = "alloc")]
+            type SecretKey =
+                SensitiveByteArray<crate::bytearray::HeapArray<{ $module::secret_key_bytes() }>>;
+            #[cfg(not(feature = "alloc"))]
             type SecretKey = SensitiveByteArray<[u8; $module::secret_key_bytes()]>;
+
+            #[cfg(feature = "alloc")]
+            type PubKey = crate::bytearray::HeapArray<{ $module::public_key_bytes() }>;
+            #[cfg(not(feature = "alloc"))]
             type PubKey = [u8; $module::public_key_bytes()];
+
+            #[cfg(feature = "alloc")]
+            type Ct = crate::bytearray::HeapArray<{ $module::ciphertext_bytes() }>;
+            #[cfg(not(feature = "alloc"))]
             type Ct = [u8; $module::ciphertext_bytes()];
+
             type Ss = SensitiveByteArray<[u8; $module::shared_secret_bytes()]>;
 
             fn genkey<R: rand_core::RngCore + rand_core::CryptoRng>(

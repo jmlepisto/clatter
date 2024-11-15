@@ -1,3 +1,5 @@
+//! Cipherstate implementation
+
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::bytearray::ByteArray;
@@ -13,6 +15,11 @@ pub struct CipherStates<C: Cipher> {
 }
 
 /// Cipherstate for encrypting and decrypting messages
+///
+/// Contains the encryption key and nonce and provides
+/// methods for encrypting messages. Will automatically
+/// increment the nonce and return an error if that
+/// overflows.
 #[derive(ZeroizeOnDrop, Zeroize)]
 pub struct CipherState<C: Cipher> {
     k: C::Key,
@@ -125,12 +132,16 @@ impl<C: Cipher> CipherState<C> {
     /// Set nonce value
     ///
     /// # Warning
-    /// **Do not reuse nonces**
+    /// **Do not reuse nonces.** Doing so WILL LEAD to a
+    /// catastrophic crypto failure.
     pub fn set_nonce(&mut self, nonce: u64) {
         self.n = nonce;
     }
 
     /// Take ownership of key and nonce of this state
+    ///
+    /// # Warning
+    /// **Use with care**
     pub fn take(self) -> (C::Key, u64) {
         (self.k.clone(), self.n)
     }

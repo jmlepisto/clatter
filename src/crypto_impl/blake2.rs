@@ -1,5 +1,6 @@
-use sha2::Digest;
+use blake2::Digest;
 
+use crate::bytearray::{ByteArray, SensitiveByteArray};
 use crate::traits::{CryptoComponent, Hash};
 
 /// BLAKE2b hash implementation
@@ -22,28 +23,22 @@ impl CryptoComponent for Blake2s {
     }
 }
 
-impl Hash for Blake2b {
-    type Block = [u8; 128];
-    type Output = [u8; 64];
+macro_rules! impl_blake {
+    ($blake:ty, $block:literal, $out:literal) => {
+        impl Hash for $blake {
+            type Block = [u8; $block];
+            type Output = SensitiveByteArray<[u8; $out]>;
 
-    fn input(&mut self, data: &[u8]) {
-        self.0.update(data);
-    }
+            fn input(&mut self, data: &[u8]) {
+                self.0.update(data);
+            }
 
-    fn result(self) -> Self::Output {
-        Self::Output::from(self.0.finalize())
-    }
+            fn result(self) -> Self::Output {
+                Self::Output::from_slice(&self.0.finalize())
+            }
+        }
+    };
 }
 
-impl Hash for Blake2s {
-    type Block = [u8; 64];
-    type Output = [u8; 32];
-
-    fn input(&mut self, data: &[u8]) {
-        self.0.update(data);
-    }
-
-    fn result(self) -> Self::Output {
-        Self::Output::from(self.0.finalize())
-    }
-}
+impl_blake!(Blake2b, 128, 64);
+impl_blake!(Blake2s, 64, 32);

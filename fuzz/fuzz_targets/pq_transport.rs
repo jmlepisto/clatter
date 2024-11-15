@@ -1,16 +1,29 @@
 #![no_main]
 
+use clatter::bytearray::ByteArray;
 use clatter::constants::MAX_MESSAGE_LEN;
-use clatter::crypto::cipher::ChaChaPoly;
-use clatter::crypto::hash::Sha256;
+use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
+use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
 use clatter::crypto::kem::pqclean_kyber::Kyber768;
 use clatter::crypto::kem::rust_crypto_kyber::Kyber512;
 use clatter::handshakepattern::*;
-use clatter::traits::Kem;
+use clatter::traits::{Cipher, Hash, Kem};
 use clatter::{Handshaker, PqHandshake};
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {
+    // TODO: generate all combinations
+    verify_with::<Kyber768, Kyber512, AesGcm, Sha256>(data);
+    verify_with::<Kyber768, Kyber512, AesGcm, Sha512>(data);
+    verify_with::<Kyber768, Kyber512, AesGcm, Blake2b>(data);
+    verify_with::<Kyber768, Kyber512, AesGcm, Blake2s>(data);
+    verify_with::<Kyber768, Kyber512, ChaChaPoly, Sha256>(data);
+    verify_with::<Kyber768, Kyber512, ChaChaPoly, Sha512>(data);
+    verify_with::<Kyber768, Kyber512, ChaChaPoly, Blake2b>(data);
+    verify_with::<Kyber768, Kyber512, ChaChaPoly, Blake2b>(data);
+});
+
+fn verify_with<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(data: &[u8]) {
     let handshakes = [
         noise_pqik(),
         noise_pqin(),
@@ -46,34 +59,34 @@ fuzz_target!(|data: &[u8]| {
 
     const PSK: &[u8] = b"Trapped inside this Octavarium!!";
 
-    let mut alice_rng = rand::thread_rng();
-    let mut bob_rng = rand::thread_rng();
-
-    let mut alice_buf = [0u8; MAX_MESSAGE_LEN];
-    let mut bob_buf = [0u8; MAX_MESSAGE_LEN];
-
-    let alice_key = Kyber768::genkey(&mut alice_rng).unwrap();
-    let bob_key = Kyber768::genkey(&mut bob_rng).unwrap();
-    let alice_pub = alice_key.public.clone();
-    let bob_pub = bob_key.public.clone();
-
     for pattern in handshakes {
-        let mut alice = PqHandshake::<Kyber512, Kyber768, ChaChaPoly, Sha256, _>::new(
+        let mut alice_rng = rand::thread_rng();
+        let mut bob_rng = rand::thread_rng();
+
+        let mut alice_buf = [0u8; MAX_MESSAGE_LEN];
+        let mut bob_buf = [0u8; MAX_MESSAGE_LEN];
+
+        let alice_key = SKEM::genkey(&mut alice_rng).unwrap();
+        let bob_key = SKEM::genkey(&mut bob_rng).unwrap();
+        let alice_pub = alice_key.public.clone();
+        let bob_pub = bob_key.public.clone();
+
+        let mut alice = PqHandshake::<EKEM, SKEM, C, H, _>::new(
             pattern.clone(),
             &[],
             true,
-            Some(alice_key.clone()),
+            Some(alice_key),
             None,
             Some(bob_pub),
             None,
             &mut alice_rng,
         )
         .unwrap();
-        let mut bob = PqHandshake::<Kyber512, Kyber768, ChaChaPoly, Sha256, _>::new(
-            pattern,
+        let mut bob = PqHandshake::<EKEM, SKEM, C, H, _>::new(
+            pattern.clone(),
             &[],
             false,
-            Some(bob_key.clone()),
+            Some(bob_key),
             None,
             Some(alice_pub),
             None,
@@ -84,7 +97,7 @@ fuzz_target!(|data: &[u8]| {
         alice.push_psk(PSK);
         bob.push_psk(PSK);
 
-        // Handshake
+        // Complete handshake
         loop {
             let n = alice.write_message(&[], &mut alice_buf).unwrap();
             let _ = bob.read_message(&alice_buf[..n], &mut bob_buf).unwrap();
@@ -101,15 +114,22 @@ fuzz_target!(|data: &[u8]| {
             }
         }
 
+        // Handshake done
         let mut alice = alice.finalize().unwrap();
         let mut bob = bob.finalize().unwrap();
 
-        // Both receive fuzzed data
-        let _ = alice.receive(data, &mut alice_buf);
-        let _ = bob.receive(data, &mut bob_buf);
+        if !pattern.is_one_way() {
+            // Both receive fuzzed data
+            let _ = alice.receive(data, &mut alice_buf);
+            let _ = bob.receive(data, &mut bob_buf);
 
-        // Both send fuzzed data
-        let _ = alice.send(data, &mut alice_buf);
-        let _ = bob.send(data, &mut bob_buf);
+            // Both send fuzzed data
+            let _ = alice.send(data, &mut alice_buf);
+            let _ = bob.send(data, &mut bob_buf);
+        } else {
+            // Alice sends and Bob receives
+            let _ = alice.send(data, &mut alice_buf);
+            let _ = bob.receive(data, &mut bob_buf);
+        }
     }
-});
+}

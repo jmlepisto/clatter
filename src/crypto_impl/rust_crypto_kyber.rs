@@ -37,9 +37,21 @@ impl CryptoComponent for Kyber1024 {
 macro_rules! impl_kyber {
     ($kyber:ty, $params:ty, $sk:expr, $pk:expr, $ct:expr) => {
         impl Kem for $kyber {
+            #[cfg(feature = "alloc")]
+            type SecretKey = SensitiveByteArray<crate::bytearray::HeapArray<$sk>>;
+            #[cfg(not(feature = "alloc"))]
             type SecretKey = SensitiveByteArray<[u8; $sk]>;
+
+            #[cfg(feature = "alloc")]
+            type PubKey = crate::bytearray::HeapArray<$pk>;
+            #[cfg(not(feature = "alloc"))]
             type PubKey = [u8; $pk];
+
+            #[cfg(feature = "alloc")]
+            type Ct = crate::bytearray::HeapArray<$ct>;
+            #[cfg(not(feature = "alloc"))]
             type Ct = [u8; $ct];
+
             type Ss = SensitiveByteArray<[u8; 32]>;
 
             fn genkey<R: rand_core::RngCore + rand_core::CryptoRng>(
@@ -47,8 +59,8 @@ macro_rules! impl_kyber {
             ) -> crate::error::KemResult<crate::KeyPair<Self::PubKey, Self::SecretKey>> {
                 let (dk, ek) = ml_kem::kem::Kem::<$params>::generate(rng);
                 Ok(KeyPair {
-                    public: ek.as_bytes().into(),
-                    secret: SensitiveByteArray::from_slice(&dk.as_bytes()),
+                    public: Self::PubKey::from_slice(&ek.as_bytes()),
+                    secret: Self::SecretKey::from_slice(&dk.as_bytes()),
                 })
             }
 

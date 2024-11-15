@@ -1,4 +1,4 @@
-//! Implementations for supported PQ crypto
+//! Concrete implementations of crypto primitives
 
 // Hashes
 #[cfg(feature = "use-blake2")]
@@ -7,9 +7,6 @@ pub mod blake2;
 pub mod sha;
 
 // KEMs
-#[cfg(feature = "pqc_kyber")]
-pub mod argyle_software_kyber;
-
 #[cfg(feature = "use-pqclean-kyber")]
 pub mod pqclean_kyber;
 

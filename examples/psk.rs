@@ -14,7 +14,7 @@ fn main() {
     let mut rng_alice = rand::thread_rng();
     let mut rng_bob = rand::thread_rng();
 
-    // Generate static keys
+    // Generate keys
     let alice_s = X25519::genkey(&mut rng_alice).unwrap();
     let bob_s = X25519::genkey(&mut rng_bob).unwrap();
 

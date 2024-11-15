@@ -90,7 +90,7 @@ fn main() {
     let _ = bob.read_message(&buf_alice[..n], &mut buf_bob).unwrap();
 
     // Second handshake message from responder to initiator
-    // <-- e, qq
+    // <-- e, ee
     let n = bob.write_message(&[], &mut buf_bob).unwrap();
     let _ = alice.read_message(&buf_bob[..n], &mut buf_alice).unwrap();
     // --------------------------

@@ -2,6 +2,8 @@
 
 use arrayvec::ArrayVec;
 
+use crate::constants::{MAX_HS_MESSAGES_PER_ROLE, MAX_TOKENS_PER_HS_MESSAGE};
+
 /// Handshake tokens as defined by the Noise spec and PQNoise paper.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Token {
@@ -45,9 +47,9 @@ pub struct HandshakePattern {
 #[derive(Clone, Debug)]
 pub struct MessagePattern {
     /// Messages sent by the initiator
-    pub initiator: ArrayVec<ArrayVec<Token, 8>, 8>,
+    pub initiator: ArrayVec<ArrayVec<Token, MAX_TOKENS_PER_HS_MESSAGE>, MAX_HS_MESSAGES_PER_ROLE>,
     /// Messages sent by the responder
-    pub responder: ArrayVec<ArrayVec<Token, 8>, 8>,
+    pub responder: ArrayVec<ArrayVec<Token, MAX_TOKENS_PER_HS_MESSAGE>, MAX_HS_MESSAGES_PER_ROLE>,
 }
 
 impl MessagePattern {
@@ -55,6 +57,19 @@ impl MessagePattern {
     pub fn has_psk(&self) -> bool {
         self.initiator.iter().flatten().any(|t| *t == Token::Psk)
             || self.responder.iter().flatten().any(|t| *t == Token::Psk)
+    }
+
+    /// Check if the pattern includes `KEM` tokens
+    pub fn has_kem(&self) -> bool {
+        self.initiator
+            .iter()
+            .flatten()
+            .any(|t| *t == Token::Ekem || *t == Token::Skem)
+            || self
+                .responder
+                .iter()
+                .flatten()
+                .any(|t| *t == Token::Ekem || *t == Token::Skem)
     }
 }
 
@@ -67,14 +82,12 @@ impl HandshakePattern {
     /// * `pre_responder` - Tokens shared by responder pre handshake
     /// * `initiator` - Initiator messages
     /// * `responder` - Responder messages
-    /// * `ìs_kem` - True if this pattern is a PQ Noise pattern with KEMs
     pub fn new(
         name: &'static str,
         pre_initiator: &[Token],
         pre_responder: &[Token],
         initiator: &[&[Token]],
         responder: &[&[Token]],
-        is_kem: bool,
     ) -> Self {
         let message_pattern = MessagePattern {
             initiator: initiator
@@ -88,7 +101,7 @@ impl HandshakePattern {
         };
         Self {
             name,
-            is_kem,
+            is_kem: message_pattern.has_kem(),
             has_psk: message_pattern.has_psk(),
             message_pattern,
             pre_initiator: pre_initiator.iter().copied().collect(),
@@ -192,7 +205,7 @@ impl HandshakePattern {
 /// <- ekem
 /// ```
 pub fn noise_pqnn() -> HandshakePattern {
-    HandshakePattern::new("pqNN", &[], &[], &[&[Token::E]], &[&[Token::Ekem]], true)
+    HandshakePattern::new("pqNN", &[], &[], &[&[Token::E]], &[&[Token::Ekem]])
 }
 
 /// ```text
@@ -208,7 +221,6 @@ pub fn noise_pqnk() -> HandshakePattern {
         &[Token::S],
         &[&[Token::Skem, Token::E]],
         &[&[Token::Ekem]],
-        true,
     )
 }
 
@@ -224,7 +236,6 @@ pub fn noise_pqnx() -> HandshakePattern {
         &[],
         &[&[Token::E], &[Token::Skem]],
         &[&[Token::Ekem, Token::S]],
-        true,
     )
 }
 
@@ -241,7 +252,6 @@ pub fn noise_pqkn() -> HandshakePattern {
         &[],
         &[&[Token::E]],
         &[&[Token::Ekem, Token::Skem]],
-        true,
     )
 }
 
@@ -259,7 +269,6 @@ pub fn noise_pqkk() -> HandshakePattern {
         &[Token::S],
         &[&[Token::Skem, Token::E]],
         &[&[Token::Ekem, Token::Skem]],
-        true,
     )
 }
 
@@ -277,7 +286,6 @@ pub fn noise_pqkx() -> HandshakePattern {
         &[],
         &[&[Token::E], &[Token::Skem]],
         &[&[Token::Ekem, Token::Skem, Token::S]],
-        true,
     )
 }
 
@@ -294,7 +302,6 @@ pub fn noise_pqxn() -> HandshakePattern {
         &[],
         &[&[Token::E], &[Token::S]],
         &[&[Token::Ekem], &[Token::Skem]],
-        true,
     )
 }
 
@@ -313,7 +320,6 @@ pub fn noise_pqxk() -> HandshakePattern {
         &[Token::S],
         &[&[Token::Skem, Token::E], &[Token::S]],
         &[&[Token::Ekem], &[Token::Skem]],
-        true,
     )
 }
 
@@ -330,7 +336,6 @@ pub fn noise_pqxx() -> HandshakePattern {
         &[],
         &[&[Token::E], &[Token::Skem, Token::S]],
         &[&[Token::Ekem, Token::S], &[Token::Skem]],
-        true,
     )
 }
 
@@ -345,7 +350,6 @@ pub fn noise_pqin() -> HandshakePattern {
         &[],
         &[&[Token::E, Token::S]],
         &[&[Token::Ekem, Token::Skem]],
-        true,
     )
 }
 
@@ -362,7 +366,6 @@ pub fn noise_pqik() -> HandshakePattern {
         &[Token::S],
         &[&[Token::Skem, Token::E, Token::S]],
         &[&[Token::Ekem, Token::Skem]],
-        true,
     )
 }
 
@@ -378,7 +381,6 @@ pub fn noise_pqix() -> HandshakePattern {
         &[],
         &[&[Token::E, Token::S], &[Token::Skem]],
         &[&[Token::Ekem, Token::Skem, Token::S]],
-        true,
     )
 }
 
@@ -566,7 +568,7 @@ pub fn noise_pqix_psk2() -> HandshakePattern {
 /// -> e, es
 /// ```
 pub fn noise_n() -> HandshakePattern {
-    HandshakePattern::new("N", &[], &[Token::S], &[&[Token::E, Token::ES]], &[], false)
+    HandshakePattern::new("N", &[], &[Token::S], &[&[Token::E, Token::ES]], &[])
 }
 
 /// ```text
@@ -582,7 +584,6 @@ pub fn noise_k() -> HandshakePattern {
         &[Token::S],
         &[&[Token::E, Token::ES, Token::SS]],
         &[],
-        false,
     )
 }
 
@@ -598,7 +599,6 @@ pub fn noise_x() -> HandshakePattern {
         &[Token::S],
         &[&[Token::E, Token::ES, Token::S, Token::SS]],
         &[],
-        false,
     )
 }
 
@@ -607,14 +607,7 @@ pub fn noise_x() -> HandshakePattern {
 /// <- e, ee
 /// ```
 pub fn noise_nn() -> HandshakePattern {
-    HandshakePattern::new(
-        "NN",
-        &[],
-        &[],
-        &[&[Token::E]],
-        &[&[Token::E, Token::EE]],
-        false,
-    )
+    HandshakePattern::new("NN", &[], &[], &[&[Token::E]], &[&[Token::E, Token::EE]])
 }
 
 /// ```text
@@ -630,7 +623,6 @@ pub fn noise_kn() -> HandshakePattern {
         &[],
         &[&[Token::E]],
         &[&[Token::E, Token::EE, Token::SE]],
-        false,
     )
 }
 
@@ -647,7 +639,6 @@ pub fn noise_nk() -> HandshakePattern {
         &[Token::S],
         &[&[Token::E, Token::ES]],
         &[&[Token::E, Token::EE]],
-        false,
     )
 }
 
@@ -665,7 +656,6 @@ pub fn noise_kk() -> HandshakePattern {
         &[Token::S],
         &[&[Token::E, Token::ES, Token::SS]],
         &[&[Token::E, Token::EE, Token::SE]],
-        false,
     )
 }
 
@@ -680,7 +670,6 @@ pub fn noise_nx() -> HandshakePattern {
         &[],
         &[&[Token::E]],
         &[&[Token::E, Token::EE, Token::S, Token::ES]],
-        false,
     )
 }
 
@@ -697,7 +686,6 @@ pub fn noise_kx() -> HandshakePattern {
         &[],
         &[&[Token::E]],
         &[&[Token::E, Token::EE, Token::SE, Token::S, Token::ES]],
-        false,
     )
 }
 
@@ -713,7 +701,6 @@ pub fn noise_xn() -> HandshakePattern {
         &[],
         &[&[Token::E], &[Token::S, Token::SE]],
         &[&[Token::E, Token::EE]],
-        false,
     )
 }
 
@@ -728,7 +715,6 @@ pub fn noise_in() -> HandshakePattern {
         &[],
         &[&[Token::E, Token::S]],
         &[&[Token::E, Token::EE, Token::SE]],
-        false,
     )
 }
 
@@ -746,7 +732,6 @@ pub fn noise_xk() -> HandshakePattern {
         &[Token::S],
         &[&[Token::E, Token::ES], &[Token::S, Token::SE]],
         &[&[Token::E, Token::EE]],
-        false,
     )
 }
 
@@ -763,7 +748,6 @@ pub fn noise_ik() -> HandshakePattern {
         &[Token::S],
         &[&[Token::E, Token::ES, Token::S, Token::SS]],
         &[&[Token::E, Token::EE, Token::SE]],
-        false,
     )
 }
 
@@ -779,7 +763,6 @@ pub fn noise_xx() -> HandshakePattern {
         &[],
         &[&[Token::E], &[Token::S, Token::SE]],
         &[&[Token::E, Token::EE, Token::S, Token::ES]],
-        false,
     )
 }
 
@@ -794,7 +777,6 @@ pub fn noise_ix() -> HandshakePattern {
         &[],
         &[&[Token::E, Token::S]],
         &[&[Token::E, Token::EE, Token::SE, Token::S, Token::ES]],
-        false,
     )
 }
 

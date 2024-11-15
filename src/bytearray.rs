@@ -1,9 +1,21 @@
+//! Generic array utilities used throughout the crate
+//!
+//! This module provides a compatibility trait [`ByteArray`] along with some
+//! helper implementations. Generally all algorithmic operations in this crate
+//! are operated on arguments which implements [`ByteArray`]. This allows us to
+//! easily support different environments and allocation modes.
+//!
+//! # Contents
+//! * [`ByteArray`] - Common trait for all arrays
+//! * [`SensitiveByteArray`] - Wrapper implementation for sensitive data which is zeroized on drop
+//! * [`HeapArray`] - Statically sized heap-allocated array that implements [`ByteArray`]. Available with the `alloc` crate feature.
+
 use core::fmt::Debug;
 
+use arrayvec::ArrayVec;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-/// Simple trait used throughout the codebase to provide
-/// portable array operations
+/// Simple trait used throughout the codebase to provide portable array operations
 pub trait ByteArray: Sized + Zeroize + PartialEq + Debug {
     /// Initialize a new array with zeros
     fn new_zero() -> Self;
@@ -18,7 +30,7 @@ pub trait ByteArray: Sized + Zeroize + PartialEq + Debug {
     fn len() -> usize;
     /// Borrow this array as a slice
     fn as_slice(&self) -> &[u8];
-    /// Borrow this array as mutable
+    /// Borrow this array as a mutable slice
     fn as_mut(&mut self) -> &mut [u8];
     /// Clone this array
     fn clone(&self) -> Self {
@@ -27,6 +39,9 @@ pub trait ByteArray: Sized + Zeroize + PartialEq + Debug {
 }
 
 /// Encapsulation for all [`ByteArray`] types that is automatically zeroized on drop.
+///
+/// Also implements [`ByteArray`] itself so this is a drop-in replacement for any data
+/// type used by the crypto implementations.
 #[derive(ZeroizeOnDrop, Zeroize, Clone, PartialEq, Debug)]
 pub struct SensitiveByteArray<A: ByteArray>(A);
 
@@ -76,8 +91,77 @@ impl<A: ByteArray> ByteArray for SensitiveByteArray<A> {
     }
 }
 
+/// Statically sized heap allocated array
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+#[cfg(feature = "alloc")]
+#[derive(Zeroize, Debug, PartialEq)]
+pub struct HeapArray<const C: usize>(alloc::vec::Vec<u8>);
+
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+#[cfg(feature = "alloc")]
+impl<const C: usize> ByteArray for HeapArray<C> {
+    fn new_zero() -> Self {
+        Self::new_with(0)
+    }
+
+    fn new_with(x: u8) -> Self {
+        let v = alloc::vec![x; C];
+        Self(v)
+    }
+
+    fn from_slice(s: &[u8]) -> Self {
+        let mut v = alloc::vec![0; C];
+        v.as_mut_slice().copy_from_slice(s);
+        Self(v)
+    }
+
+    fn len() -> usize {
+        C
+    }
+
+    fn as_slice(&self) -> &[u8] {
+        self.0.as_slice()
+    }
+
+    fn as_mut(&mut self) -> &mut [u8] {
+        self.0.as_mut_slice()
+    }
+}
+
+impl<const C: usize> ByteArray for ArrayVec<u8, C> {
+    fn new_zero() -> Self {
+        Self::new_with(0)
+    }
+
+    fn new_with(x: u8) -> Self {
+        let mut a = ArrayVec::<u8, C>::new();
+        for _ in 0..C {
+            a.push(x);
+        }
+        a
+    }
+
+    fn from_slice(s: &[u8]) -> Self {
+        let mut a = Self::new_zero();
+        a.copy_from_slice(s);
+        a
+    }
+
+    fn len() -> usize {
+        C
+    }
+
+    fn as_slice(&self) -> &[u8] {
+        self
+    }
+
+    fn as_mut(&mut self) -> &mut [u8] {
+        self
+    }
+}
+
 macro_rules! impl_array {
-    ($array:ty, $w:expr) => {
+    ($array:ty, $w:literal) => {
         impl $array for [u8; $w] {
             fn new_zero() -> Self {
                 [0u8; $w]
@@ -103,21 +187,15 @@ macro_rules! impl_array {
     };
 }
 
-// Hear me out:
-// If we have to manually define the sizes for all crypto-related arrays,
-// many indexing and sizing related errors can be eliminated completely.
-//
-// This adds a bit of labor for the developers, but it is worth it. To add
-// heap allocation support, we can use this same approach with any statically-sized
-// heap-allocated array type we wish. Either make one of our own or use existing
-// crates.
-//
-// TL;DR
-// Let's not use Vecs
-
+// Implement ByteArray for the most common array sizes
+impl_array!(ByteArray, 8);
+impl_array!(ByteArray, 16);
 impl_array!(ByteArray, 32);
 impl_array!(ByteArray, 64);
 impl_array!(ByteArray, 128);
+impl_array!(ByteArray, 256);
+impl_array!(ByteArray, 512);
+impl_array!(ByteArray, 1024);
 
 // These are for Kyber
 impl_array!(ByteArray, 768);

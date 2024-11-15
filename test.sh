@@ -1,9 +1,4 @@
-cargo test --release --all --features=\
-use-sha,\
-use-blake2,\
-use-aes-gcm,\
-use-chacha20poly1305,\
-use-rust-crypto-kyber,\
-use-25519,\
-use-argyle-kyber768\
- -- --nocapture
+# Without alloc
+cargo test --release --all -- --nocapture
+# With alloc
+cargo test --release --all --features=alloc -- --nocapture

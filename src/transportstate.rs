@@ -1,3 +1,11 @@
+//! Transportstate implementation
+//!
+//! [`TransportState`] is constructed from a [`Handshaker`] once the handshake
+//! is completed and it can be used for encrypting and decrypting transport
+//! communication with the peer. Methods for rekeying and configuring the
+//! encryption nonce are also provided so that the user can easily implement
+//! higher level protocol features.
+
 use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;
 use crate::constants::MAX_MESSAGE_LEN;
@@ -5,7 +13,7 @@ use crate::error::{HandshakeError, HandshakeResult, TransportError, TransportRes
 use crate::handshakepattern::HandshakePattern;
 use crate::traits::{Cipher, Handshaker, Hash};
 
-/// Transport state used after a successful handshake
+/// Transportstate used after a successful handshake
 ///
 /// Contains session keys for secure communication in the
 /// form of a [`CipherStates`] struct. Users have raw access
@@ -16,6 +24,8 @@ use crate::traits::{Cipher, Handshaker, Hash};
 /// * [`Self::receive`]
 /// * [`Self::send_in_place`]
 /// * [`Self::receive_in_place`]
+/// * [`Self::send_vec`] (requires `alloc`)
+/// * [`Self::receive_vec`] (requires `alloc`)
 pub struct TransportState<C: Cipher, H: Hash> {
     pattern: HandshakePattern,
     cipherstates: CipherStates<C>,
@@ -41,6 +51,32 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     /// Encrypt a message for remote peer
     ///
     /// Encrypts data from `msg` and places the resulting ciphertext
+    /// in a vector.
+    ///
+    /// # Arguments
+    /// * `msg` - Message buffer to encrypt
+    ///
+    /// # Returns
+    /// * Encrypted bytes written to a `Vec<u8>`
+    ///
+    /// # Errors
+    /// * [`TransportError::Cipher`] - Encryption error
+    /// * [`TransportError::OneWayViolation`] - Tried to send data as responder after a one-way handshake
+    ///
+    /// # Panics
+    /// * If message length exceeds [`MAX_MESSAGE_LEN`]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    #[cfg(feature = "alloc")]
+    pub fn send_vec(&mut self, msg: &[u8]) -> TransportResult<alloc::vec::Vec<u8>> {
+        let mut buf = alloc::vec![0; msg.len() + C::tag_len()];
+        let n = self.send(msg, &mut buf)?;
+        assert_eq!(buf.len(), n);
+        Ok(buf)
+    }
+
+    /// Encrypt a message for remote peer
+    ///
+    /// Encrypts data from `msg` and places the resulting ciphertext
     /// in `buf`, returning the total number of bytes written.
     ///
     /// # Arguments
@@ -48,7 +84,7 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     /// * `buf` - Destination buffer to store the encrypted message
     ///
     /// # Returns
-    /// * Encrypted ytes written to `buf`
+    /// * Encrypted bytes written to `buf`
     ///
     /// # Errors
     /// * [`TransportError::BufferTooSmall`] - Resulting message does not fit in `buf`
@@ -125,6 +161,33 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
 
         c.encrypt_with_ad_in_place(&[], msg, msg_len)?;
         Ok(out_len)
+    }
+
+    /// Decrypt a message from remote peer
+    ///
+    /// Decrypts data from `msg` and places the resulting plaintext
+    /// in a vector.
+    ///
+    /// # Arguments
+    /// * `msg` - Received message buffer
+    ///
+    /// # Returns
+    /// * Decrypted bytes written to `Vec<u8>`
+    ///
+    /// # Errors
+    /// * [`TransportError::TooShort`] - Provided message `msg` is too short for decryption
+    /// * [`TransportError::Cipher`] - Decryption error
+    /// * [`TransportError::OneWayViolation`] - Tried to receive data as initiator after a one-way handshake
+    ///
+    /// # Panics
+    /// * If message length exceeds [`MAX_MESSAGE_LEN`]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    #[cfg(feature = "alloc")]
+    pub fn receive_vec(&mut self, msg: &[u8]) -> TransportResult<alloc::vec::Vec<u8>> {
+        let mut buf = alloc::vec![0; msg.len() - C::tag_len()];
+        let n = self.receive(msg, &mut buf)?;
+        assert_eq!(buf.len(), n);
+        Ok(buf)
     }
 
     /// Decrypt a message from remote peer

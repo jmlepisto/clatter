@@ -48,6 +48,9 @@ name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
+dependencies = [
+ "zeroize",
+]
 
 [[package]]
 name = "blake2"
@@ -127,7 +130,7 @@ dependencies = [
 
 [[package]]
 name = "clatter"
-version = "1.0.0-rc.2"
+version = "1.0.0"
 dependencies = [
  "aes-gcm",
  "arrayvec",
@@ -135,7 +138,6 @@ dependencies = [
  "chacha20poly1305",
  "displaydoc",
  "ml-kem",
- "pqc_kyber",
  "pqcrypto-kyber",
  "pqcrypto-traits",
  "rand",
@@ -413,15 +415,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77957b295656769bb8ad2b6a6b09d897d94f05c41b069aede1fcdaa675eaea04"
 dependencies = [
  "zerocopy",
-]
-
-[[package]]
-name = "pqc_kyber"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b23e1823e8a78ad67990c5cb843d5eba75ab3b8a44d041f3814fde89463dc6f"
-dependencies = [
- "rand_core",
 ]
 
 [[package]]

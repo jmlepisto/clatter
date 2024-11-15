@@ -4,8 +4,6 @@ use clatter::bytearray::ByteArray;
 use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
 use clatter::crypto::dh::X25519;
 use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
-#[cfg(feature = "use-argyle-kyber768")]
-use clatter::crypto::kem::argyle_software_kyber::Kyber768 as ArgyleKyber;
 use clatter::crypto::kem::{pqclean_kyber, rust_crypto_kyber};
 use clatter::handshakepattern::*;
 use clatter::traits::{Cipher, Dh, Hash, Kem};
@@ -131,11 +129,8 @@ fn smoke_pq_handshakes() {
         cipher_hash_combos::<pqclean_kyber::Kyber768, pqclean_kyber::Kyber768>(pattern.clone());
         cipher_hash_combos::<pqclean_kyber::Kyber1024, pqclean_kyber::Kyber1024>(pattern.clone());
 
-        // One cross-use test just in case
+        // One cross-use test just in case with two different KEM vendors
         cipher_hash_combos::<pqclean_kyber::Kyber768, rust_crypto_kyber::Kyber768>(pattern.clone());
-
-        #[cfg(feature = "use-argyle-kyber768")]
-        cipher_hash_combos::<ArgyleKyber, ArgyleKyber>(pattern);
     }
 }
 
@@ -201,18 +196,28 @@ fn nq_handshake<DH: Dh, C: Cipher, H: Hash>(pattern: HandshakePattern) {
     let mut alice = alice.finalize().unwrap();
     let mut bob = bob.finalize().unwrap();
 
+    // "Normal" send-receive
     let n = alice
         .send(b"Scream without a sound", &mut alice_buf)
         .unwrap();
     let n = bob.receive(&alice_buf[..n], &mut bob_buf).unwrap();
     assert_eq!(bob_buf[..n], *b"Scream without a sound");
 
+    // In-place send-receive
     let mut in_place_buf = [0; 4096];
     let msg = b"Flying off the handle";
     in_place_buf[..msg.len()].copy_from_slice(msg);
     let n = alice.send_in_place(&mut in_place_buf, msg.len()).unwrap();
     let n = bob.receive_in_place(&mut in_place_buf, n).unwrap();
     assert_eq!(in_place_buf[..n], *msg);
+
+    // Vec send-receive
+    #[cfg(feature = "alloc")]
+    assert_eq!(
+        &bob.receive_vec(&alice.send_vec(b"Eugene gene the dance machine").unwrap())
+            .unwrap(),
+        b"Eugene gene the dance machine"
+    );
 }
 
 fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePattern) {
@@ -277,6 +282,7 @@ fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePatt
     let mut alice = alice.finalize().unwrap();
     let mut bob = bob.finalize().unwrap();
 
+    // "Normal" send-receive
     let n = alice
         .send(b"Find I've come full circle", &mut alice_buf)
         .unwrap();
@@ -284,10 +290,19 @@ fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePatt
 
     assert_eq!(bob_buf[..n], *b"Find I've come full circle");
 
+    // In-place send-receive
     let mut in_place_buf = [0; 4096];
-    let msg = b"This story ends where it began";
+    let msg = b"On a gleaming razor's edge";
     in_place_buf[..msg.len()].copy_from_slice(msg);
     let n = alice.send_in_place(&mut in_place_buf, msg.len()).unwrap();
     let n = bob.receive_in_place(&mut in_place_buf, n).unwrap();
     assert_eq!(in_place_buf[..n], *msg);
+
+    // Vec send-receive
+    #[cfg(feature = "alloc")]
+    assert_eq!(
+        &bob.receive_vec(&alice.send_vec(b"This story ends where it began").unwrap())
+            .unwrap(),
+        b"This story ends where it began"
+    );
 }

@@ -84,7 +84,7 @@ impl Cipher for ChaChaPoly {
         let mut full_nonce = [0u8; 12];
         full_nonce[4..].copy_from_slice(&nonce.to_le_bytes());
 
-        let (buffer, tag) = in_out[..ciphertext_len].split_at_mut(ciphertext_len - 16);
+        let (buffer, tag) = in_out[..ciphertext_len].split_at_mut(ciphertext_len - Self::tag_len());
 
         ChaCha20Poly1305::new(k.deref().into())
             .decrypt_in_place_detached(&full_nonce.into(), ad, buffer, tag.as_ref().into())

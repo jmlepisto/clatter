@@ -1,5 +1,5 @@
 #!/bin/bash
 
-cargo clippy -- -Dwarnings
+cargo clippy --all-features -- -Dwarnings
 cargo +nightly fmt --all
 ./test.sh
