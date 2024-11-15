@@ -115,7 +115,7 @@ where
         Ok(())
     }
 
-    /// Return [`CipherStates`] for encrypting transport messages
+    /// Return [`CipherStates`] for encrypting and decrypting transport messages
     ///
     /// # Panics
     /// * If no key material has been stablished

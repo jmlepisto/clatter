@@ -17,6 +17,13 @@ use crate::transportstate::TransportState;
 /// Dual layer handshakes require an additional intermediate buffer
 /// for decrypting outer layer handshake messages. The buffer size
 /// is controlled by the generic parameter `BUF`.
+///
+/// # Message Sequences
+///
+/// With dual layer handshakes it is possible to construct handshake pattern
+/// combinations which result in one party having to send **two handshake
+/// messages in a row**. Take care when implementing your handshaking logic and
+/// always use [`Self::is_write_turn`] to check who should send next.
 pub struct DualLayerHandshake<Outer, Inner, C, H, const BUF: usize>
 where
     Inner: Handshaker<C, H>,
@@ -48,10 +55,11 @@ where
     /// * `const BUF` - Intermediate decrypt buffer size - Must be large enough to fit all inner handshake messages
     ///
     /// # Panics
-    /// Panics if `outer` and `inner` aren't both either
-    /// initiators or responders.
+    /// * If `outer` and `inner` aren't both either initiators or responders
+    /// * If outer handshake is a one-way pattern
     pub fn new(outer: Outer, inner: Inner) -> Self {
         assert!(outer.is_initiator() == inner.is_initiator());
+        assert!(!outer.get_pattern().is_one_way());
 
         Self {
             outer: Some(outer),

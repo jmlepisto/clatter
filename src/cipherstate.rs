@@ -6,7 +6,7 @@ use crate::bytearray::ByteArray;
 use crate::error::{CipherError, CipherResult};
 use crate::traits::{Cipher, CryptoComponent};
 
-/// Pair of [`CipherState`] instances for sending and receiving transport messages
+/// Pair of [`CipherState`] instances for encrypting and decrypting transport messages
 pub struct CipherStates<C: Cipher> {
     /// Cipher for initiator -> responder communication
     pub initiator_to_responder: CipherState<C>,
@@ -17,9 +17,9 @@ pub struct CipherStates<C: Cipher> {
 /// Cipherstate for encrypting and decrypting messages
 ///
 /// Contains the encryption key and nonce and provides
-/// methods for encrypting messages. Will automatically
-/// increment the nonce and return an error if that
-/// overflows.
+/// methods for encrypting and decrypting data.
+/// Will automatically increment the nonce and return an
+/// error if that overflows.
 #[derive(ZeroizeOnDrop, Zeroize)]
 pub struct CipherState<C: Cipher> {
     k: C::Key,
@@ -34,7 +34,7 @@ impl<C: Cipher> CryptoComponent for CipherState<C> {
 }
 
 impl<C: Cipher> CipherState<C> {
-    /// Initialize cipherstate with given key and nonce
+    /// Initialize with given key and nonce
     ///
     /// # Panics
     /// Panics if key data has incorrect length

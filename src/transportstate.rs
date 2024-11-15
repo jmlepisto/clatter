@@ -2,9 +2,10 @@
 //!
 //! [`TransportState`] is constructed from a [`Handshaker`] once the handshake
 //! is completed and it can be used for encrypting and decrypting transport
-//! communication with the peer. Methods for rekeying and configuring the
-//! encryption nonce are also provided so that the user can easily implement
-//! higher level protocol features.
+//! communication with the peer.
+//!
+//! Methods for rekeying and configuring the encryption nonce are also provided
+//! so that the user can easily implement higher level protocol features.
 
 use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;

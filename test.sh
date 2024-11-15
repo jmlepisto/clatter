@@ -1,3 +1,6 @@
+#!/bin/bash
+set -e
+
 # Without alloc
 cargo test --release --all -- --nocapture
 # With alloc
