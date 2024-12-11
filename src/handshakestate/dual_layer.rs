@@ -75,6 +75,26 @@ where
         self.outer_is_finished
     }
 
+    /// Get reference to inner handshake
+    pub fn inner(&self) -> &Inner {
+        &self.inner
+    }
+
+    /// Get mutable reference to inner handshake
+    pub fn inner_mut(&mut self) -> &mut Inner {
+        &mut self.inner
+    }
+
+    /// Get reference to outer handshake
+    pub fn outer(&self) -> Option<&Outer> {
+        self.outer.as_ref()
+    }
+
+    /// Get mutable reference to outer handshake
+    pub fn outer_mut(&mut self) -> Option<&mut Outer> {
+        self.outer.as_mut()
+    }
+
     fn update_outer_state(&mut self) -> HandshakeResult<()> {
         if self.outer.as_ref().unwrap().is_finished() {
             self.outer_transport = Some(self.outer.take().unwrap().finalize()?);
@@ -177,6 +197,9 @@ where
     C: Cipher,
     H: Hash,
 {
+    type E = Inner::E;
+    type S = Inner::S;
+
     fn push_psk(&mut self, _psk: &[u8]) {
         panic!("Not applicable for dual-layer handshakes");
     }
@@ -203,5 +226,15 @@ where
 
     fn build_name(_: &crate::handshakepattern::HandshakePattern) -> arrayvec::ArrayString<128> {
         panic!("Not applicable for dual-layer handshakes");
+    }
+
+    /// Get remote static key of the **inner** handshake (if available)
+    fn get_remote_static(&self) -> Option<Self::S> {
+        self.inner.get_remote_static()
+    }
+
+    /// Get remote ephemeral key of the **inner** handshake (if available)
+    fn get_remote_ephemeral(&self) -> Option<Self::E> {
+        self.inner.get_remote_ephemeral()
     }
 }

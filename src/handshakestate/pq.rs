@@ -436,6 +436,9 @@ where
     H: Hash,
     RNG: RngCore + CryptoRng,
 {
+    type E = EKEM::PubKey;
+    type S = SKEM::PubKey;
+
     fn push_psk(&mut self, psk: &[u8]) {
         self.internals.push_psk(psk);
     }
@@ -496,16 +499,41 @@ where
 
     fn build_name(pattern: &HandshakePattern) -> ArrayString<128> {
         let mut ret = ArrayString::new();
-        write!(
-            &mut ret,
-            "Noise_{}_{}_{}_{}_{}",
-            pattern.get_name(),
-            EKEM::name(),
-            SKEM::name(),
-            C::name(),
-            H::name()
-        )
-        .unwrap();
+
+        if SKEM::name() == EKEM::name() {
+            // If SKEM and EKEM are the same, we can build the pattern name as usual.
+            // This is compatible with Nyquist.
+            write!(
+                &mut ret,
+                "Noise_{}_{}_{}_{}",
+                pattern.get_name(),
+                EKEM::name(),
+                C::name(),
+                H::name()
+            )
+            .unwrap();
+        } else {
+            // If SKEM and EKEM are different, we will use our own custom naming.
+            // Both KEMs are included in the pattern name, separated by a "+" sign.
+            write!(
+                &mut ret,
+                "Noise_{}_{}+{}_{}_{}",
+                pattern.get_name(),
+                EKEM::name(),
+                SKEM::name(),
+                C::name(),
+                H::name()
+            )
+            .unwrap();
+        }
         ret
+    }
+
+    fn get_remote_static(&self) -> Option<Self::S> {
+        self.internals.rs.as_ref().map(|rs| rs.clone())
+    }
+
+    fn get_remote_ephemeral(&self) -> Option<Self::E> {
+        self.internals.re.as_ref().map(|re| re.clone())
     }
 }

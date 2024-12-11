@@ -36,7 +36,7 @@ default = [
     "use-blake2",
     "use-25519", 
     "use-pqclean-kyber",
-    "use-rust-crypto-kyber", 
+    "use-rust-crypto-ml-kem", 
 ]
 
 alloc = []
@@ -55,7 +55,7 @@ use-blake2 = ["blake2"]
 use-aes-gcm = ["aes-gcm"]
 use-chacha20poly1305 = ["chacha20poly1305"]
 use-pqclean-kyber = ["pqcrypto-kyber", "pqcrypto-traits"]
-use-rust-crypto-kyber = ["ml-kem"]
+use-rust-crypto-ml-kem = ["ml-kem"]
 use-25519 = ["x25519-dalek"]
 
 # docs.rs-specific configuration

@@ -70,7 +70,7 @@ pattern and no handshake payload data at all:
 ```rust
 use clatter::crypto::cipher::ChaChaPoly;
 use clatter::crypto::hash::Sha512;
-use clatter::crypto::kem::rust_crypto_kyber::Kyber512;
+use clatter::crypto::kem::rust_crypto_ml_kem::MlKem512;
 use clatter::handshakepattern::noise_pqnn;
 use clatter::traits::Handshaker;
 use clatter::PqHandshake;
@@ -79,7 +79,7 @@ fn main() {
     let mut rng_alice = rand::thread_rng();
 
     // Instantiate initiator handshake
-    let mut alice = PqHandshake::<Kyber512, Kyber512, ChaChaPoly, Sha512, _>::new(
+    let mut alice = PqHandshake::<MlKem512, MlKem512, ChaChaPoly, Sha512, _>::new(
         noise_pqnn(),   // Handshake pattern
         &[],            // Prologue data
         true,           // Are we the initiator
@@ -127,17 +127,17 @@ fn main() {
 Clatter allows user to pick the crypto primitives they wish to use via feature flags. Below is a table
 of all the configurable features supported by Clatter:
 
-| Feature flag              | Description                                       | Default   | Details                                       |
-| ---                       | ---                                               | ---       | ---                                           |
-| `use-25519`               | Enable X25519 DH                                  | yes       |                                               |
-| `use-aes-gcm`             | Enable AES-GCM cipher                             | yes       |                                               |
-| `use-chacha20poly1305`    | Enable ChaCha20-Poly1305 cipher                   | yes       |                                               |
-| `use-sha`                 | Enable SHA-256 and SHA-512 hashing                | yes       |                                               |
-| `use-blake2`              | Enable BLAKE2 hashing                             | yes       |                                               |
-| `use-rust-crypto-kyber`   | Enable Kyber KEMs by [RustCrypto][RustCrypto]     | yes       |                                               |
-| `use-pqclean-kyber`       | Enable Kyber KEMs by [PQClean][PQClean]           | yes       |                                               |
-| `std`                     | Enable standard library support                   | no        | Enables `std` for supported dependencies      |
-| `alloc`                   | Enable allocator support                          | no        |                                               |
+| Feature flag              | Description                                               | Default   | Details                                       |
+| ---                       | ---                                                       | ---       | ---                                           |
+| `use-25519`               | Enable X25519 DH                                          | yes       |                                               |
+| `use-aes-gcm`             | Enable AES-GCM cipher                                     | yes       |                                               |
+| `use-chacha20poly1305`    | Enable ChaCha20-Poly1305 cipher                           | yes       |                                               |
+| `use-sha`                 | Enable SHA-256 and SHA-512 hashing                        | yes       |                                               |
+| `use-blake2`              | Enable BLAKE2 hashing                                     | yes       |                                               |
+| `use-rust-crypto-ml-kem`  | Enable ML-KEM (Kyber) KEMs by [RustCrypto][RustCrypto]    | yes       |                                               |
+| `use-pqclean-kyber`       | Enable Kyber KEMs by [PQClean][PQClean]                   | yes       |                                               |
+| `std`                     | Enable standard library support                           | no        | Enables `std` for supported dependencies      |
+| `alloc`                   | Enable allocator support                                  | no        |                                               |
 
 [RustCrypto]: https://github.com/RustCrypto/KEMs
 [PQClean]: https://github.com/rustpq/pqcrypto
@@ -181,6 +181,49 @@ With Clatter the same KEM is used for both initiator and responder operations, w
 possible to configure a separate KEM for ephemeral use.
 * PQNoise presents *SEEC*, a method for improving RNG security in bad randomness settings. Clatter
 does not currently implement *SEEC*.
+
+## Protocol Naming and Interoperability
+
+Noise uses the protocol name as a basis for the handshake hash and for this reason it is important for
+cross-implementation compatibility to have consistent naming schemes for the crypto primitives. For all
+the classical ones Noise spec defines the naming but there is no absolute source for naming the PQ ones.
+
+On top of this, there's also the fact that Kyber KEM was renamed to "ML-KEM" during the selection process
+and some crypto crates still use the term "Kyber" while others have migrated to "ML-KEM". Clatter uses
+whichever name the underlying crate has chosen to use.
+
+Thus Clatter proposes and uses the following naming scheme:
+
+| Primitive     | Protocol Name |
+| ---           | ---           |
+| Kyber 512     | `Kyber512`    |
+| Kyber 768     | `Kyber768`    |
+| Kyber 1024    | `Kyber1024`   |
+| ML-KEM-512    | `MLKEM512`    |
+| ML-KEM-768    | `MLKEM768`    |
+| ML-KEM-1024   | `MLKEM1024`   |
+
+Clatter also includes the possibility to pick different KEMs for ehpemeral and static operations. If the
+same KEM is used for both, the name of the KEM is simply placed in the protocol name in place of the DH algorithm.
+
+Examples:
+
+```text
+Noise_pqNN_Kyber512_ChaChaPoly_BLAKE2s
+Noise_pqNN_MLKEM512_ChaChaPoly_BLAKE2s
+```
+
+If, however, a different KEM is used for ephemeral and static operations, the resulting name will include both
+KEMs joined together with a `+` symbol - ephemeral KEM first.
+
+Examples:
+```text
+Noise_pqNN_Kyber512+Kyber1024_ChaChaPoly_BLAKE2s
+Noise_pqNN_MLKEM512+Kyber768_ChaChaPoly_BLAKE2s
+```
+
+
+
 
 ## Verification
 

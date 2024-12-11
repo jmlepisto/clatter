@@ -55,7 +55,7 @@
 //! | `use-chacha20poly1305`    | Enable ChaCha20-Poly1305 cipher           | yes       |                                           |
 //! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing        | yes       |                                           |
 //! | `use-blake2`              | Enable BLAKE2 hashing                     | yes       |                                           |
-//! | `use-rust-crypto-kyber`   | Enable Kyber KEMs by RustCrypto           | yes       |                                           |
+//! | `use-rust-crypto-ml-kem`  | Enable ML-KEM (Kyber) KEMs by RustCrypto  | yes       |                                           |
 //! | `use-pqclean-kyber`       | Enable Kyber KEMs by PQClean              | yes       |                                           |
 //! | `std`                     | Enable standard library support           | no        | Enables `std` for supported dependencies  |
 //! | `alloc`                   | Enable allocator support                  | no        |                                           |
@@ -68,7 +68,7 @@
 //! ```no_run
 //! use clatter::crypto::cipher::ChaChaPoly;
 //! use clatter::crypto::hash::Sha512;
-//! use clatter::crypto::kem::rust_crypto_kyber::Kyber512;
+//! use clatter::crypto::kem::rust_crypto_ml_kem::MlKem512;
 //! use clatter::handshakepattern::noise_pqnn;
 //! use clatter::traits::Handshaker;
 //! use clatter::PqHandshake;
@@ -76,7 +76,7 @@
 //! let mut rng_alice = rand::thread_rng();
 //!
 //! // Instantiate initiator handshake
-//! let mut alice = PqHandshake::<Kyber512, Kyber512, ChaChaPoly, Sha512, _>::new(
+//! let mut alice = PqHandshake::<MlKem512, MlKem512, ChaChaPoly, Sha512, _>::new(
 //!     noise_pqnn(),   // Handshake pattern
 //!     &[],            // Prologue data
 //!     true,           // Are we the initiator
@@ -144,9 +144,9 @@ pub mod crypto {
         #[cfg_attr(docsrs, doc(cfg(feature = "use-pqclean-kyber")))]
         #[cfg(feature = "use-pqclean-kyber")]
         pub use crate::crypto_impl::pqclean_kyber;
-        #[cfg_attr(docsrs, doc(cfg(feature = "use-rust-crypto-kyber")))]
-        #[cfg(feature = "use-rust-crypto-kyber")]
-        pub use crate::crypto_impl::rust_crypto_kyber;
+        #[cfg_attr(docsrs, doc(cfg(feature = "use-rust-crypto-ml-kem")))]
+        #[cfg(feature = "use-rust-crypto-ml-kem")]
+        pub use crate::crypto_impl::rust_crypto_ml_kem;
     }
 
     /// Supported DH algorithms
