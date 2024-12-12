@@ -399,6 +399,9 @@ where
     H: Hash,
     RNG: RngCore + CryptoRng,
 {
+    type E = DH::PubKey;
+    type S = DH::PubKey;
+
     fn push_psk(&mut self, psk: &[u8]) {
         self.internals.push_psk(psk);
     }
@@ -459,5 +462,13 @@ where
         )
         .unwrap();
         ret
+    }
+
+    fn get_remote_static(&self) -> Option<Self::S> {
+        self.internals.rs.as_ref().map(|rs| rs.clone())
+    }
+
+    fn get_remote_ephemeral(&self) -> Option<Self::E> {
+        self.internals.re.as_ref().map(|re| re.clone())
     }
 }

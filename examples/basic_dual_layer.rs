@@ -3,7 +3,7 @@ use core::str;
 use clatter::crypto::cipher::ChaChaPoly;
 use clatter::crypto::dh::X25519;
 use clatter::crypto::hash::Sha512;
-use clatter::crypto::kem::rust_crypto_kyber::Kyber512;
+use clatter::crypto::kem::rust_crypto_ml_kem::MlKem512;
 use clatter::handshakepattern::{noise_nn, noise_pqnn};
 use clatter::traits::Handshaker;
 use clatter::{DualLayerHandshake, NqHandshake, PqHandshake};
@@ -38,7 +38,7 @@ fn main() {
     )
     .unwrap();
 
-    let alice_pq = PqHandshake::<Kyber512, Kyber512, ChaChaPoly, Sha512, _>::new(
+    let alice_pq = PqHandshake::<MlKem512, MlKem512, ChaChaPoly, Sha512, _>::new(
         noise_pqnn(),
         &[],
         true,
@@ -50,7 +50,7 @@ fn main() {
     )
     .unwrap();
 
-    let bob_pq = PqHandshake::<Kyber512, Kyber512, ChaChaPoly, Sha512, _>::new(
+    let bob_pq = PqHandshake::<MlKem512, MlKem512, ChaChaPoly, Sha512, _>::new(
         noise_pqnn(),
         &[],
         false,

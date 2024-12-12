@@ -10,8 +10,8 @@ pub mod sha;
 #[cfg(feature = "use-pqclean-kyber")]
 pub mod pqclean_kyber;
 
-#[cfg(feature = "use-rust-crypto-kyber")]
-pub mod rust_crypto_kyber;
+#[cfg(feature = "use-rust-crypto-ml-kem")]
+pub mod rust_crypto_ml_kem;
 
 // Ciphers
 #[cfg(feature = "use-aes-gcm")]

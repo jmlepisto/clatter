@@ -4,7 +4,7 @@ use clatter::bytearray::ByteArray;
 use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
 use clatter::crypto::dh::X25519;
 use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
-use clatter::crypto::kem::{pqclean_kyber, rust_crypto_kyber};
+use clatter::crypto::kem::{pqclean_kyber, rust_crypto_ml_kem};
 use clatter::handshakepattern::*;
 use clatter::traits::{Cipher, Dh, Hash, Kem};
 use clatter::{DualLayerHandshake, Handshaker, NqHandshake, PqHandshake};
@@ -114,13 +114,13 @@ fn smoke_pq_handshakes() {
 
     for pattern in handshakes {
         // Rust crypto
-        cipher_hash_combos::<rust_crypto_kyber::Kyber512, rust_crypto_kyber::Kyber512>(
+        cipher_hash_combos::<rust_crypto_ml_kem::MlKem512, rust_crypto_ml_kem::MlKem512>(
             pattern.clone(),
         );
-        cipher_hash_combos::<rust_crypto_kyber::Kyber768, rust_crypto_kyber::Kyber768>(
+        cipher_hash_combos::<rust_crypto_ml_kem::MlKem768, rust_crypto_ml_kem::MlKem768>(
             pattern.clone(),
         );
-        cipher_hash_combos::<rust_crypto_kyber::Kyber1024, rust_crypto_kyber::Kyber1024>(
+        cipher_hash_combos::<rust_crypto_ml_kem::MlKem1024, rust_crypto_ml_kem::MlKem1024>(
             pattern.clone(),
         );
 
@@ -130,7 +130,9 @@ fn smoke_pq_handshakes() {
         cipher_hash_combos::<pqclean_kyber::Kyber1024, pqclean_kyber::Kyber1024>(pattern.clone());
 
         // One cross-use test just in case with two different KEM vendors
-        cipher_hash_combos::<pqclean_kyber::Kyber768, rust_crypto_kyber::Kyber768>(pattern.clone());
+        cipher_hash_combos::<pqclean_kyber::Kyber768, rust_crypto_ml_kem::MlKem768>(
+            pattern.clone(),
+        );
     }
 }
 
@@ -253,18 +255,19 @@ fn smoke_dual_layer_handshakes() {
         }
         for pq in &pq_handshakes {
             // Rust crypto
-            cipher_hash_combos::<rust_crypto_kyber::Kyber512, rust_crypto_kyber::Kyber512, X25519>(
+            cipher_hash_combos::<rust_crypto_ml_kem::MlKem512, rust_crypto_ml_kem::MlKem512, X25519>(
                 nq.clone(),
                 pq.clone(),
             );
-            cipher_hash_combos::<rust_crypto_kyber::Kyber768, rust_crypto_kyber::Kyber768, X25519>(
+            cipher_hash_combos::<rust_crypto_ml_kem::MlKem768, rust_crypto_ml_kem::MlKem768, X25519>(
                 nq.clone(),
                 pq.clone(),
             );
-            cipher_hash_combos::<rust_crypto_kyber::Kyber1024, rust_crypto_kyber::Kyber1024, X25519>(
-                nq.clone(),
-                pq.clone(),
-            );
+            cipher_hash_combos::<
+                rust_crypto_ml_kem::MlKem1024,
+                rust_crypto_ml_kem::MlKem1024,
+                X25519,
+            >(nq.clone(), pq.clone());
 
             // PQCLean
             cipher_hash_combos::<pqclean_kyber::Kyber512, pqclean_kyber::Kyber512, X25519>(
@@ -281,7 +284,7 @@ fn smoke_dual_layer_handshakes() {
             );
 
             // One cross-use test just in case with two different KEM vendors
-            cipher_hash_combos::<pqclean_kyber::Kyber768, rust_crypto_kyber::Kyber768, X25519>(
+            cipher_hash_combos::<pqclean_kyber::Kyber768, rust_crypto_ml_kem::MlKem768, X25519>(
                 nq.clone(),
                 pq.clone(),
             );

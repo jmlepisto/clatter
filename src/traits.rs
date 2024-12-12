@@ -273,6 +273,11 @@ where
     C: Cipher,
     H: Hash,
 {
+    /// Ephemeral public key type
+    type E: ByteArray;
+    /// Static public key type
+    type S: ByteArray;
+
     /// Write next handshake message to the given buffer
     ///
     /// # Arguments
@@ -398,6 +403,12 @@ where
     fn get_name(&self) -> ArrayString<128> {
         Self::build_name(&self.get_pattern())
     }
+
+    /// Get remote static key (if available)
+    fn get_remote_static(&self) -> Option<Self::S>;
+
+    /// Get remote ephemeral key (if available)
+    fn get_remote_ephemeral(&self) -> Option<Self::E>;
 
     /// Transition into transport mode
     ///

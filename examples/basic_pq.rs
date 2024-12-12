@@ -4,7 +4,7 @@ use clatter::crypto::cipher::ChaChaPoly;
 use clatter::crypto::hash::Sha512;
 use clatter::crypto::kem::pqclean_kyber::Kyber768;
 // We can mix and match KEMs from different vendors
-use clatter::crypto::kem::rust_crypto_kyber::Kyber512;
+use clatter::crypto::kem::rust_crypto_ml_kem::MlKem512;
 use clatter::handshakepattern::noise_pqnn;
 use clatter::traits::Handshaker;
 use clatter::PqHandshake;
@@ -12,7 +12,7 @@ use clatter::PqHandshake;
 fn main() {
     let mut rng_alice = rand::thread_rng();
     let mut rng_bob = rand::thread_rng();
-    let mut alice = PqHandshake::<Kyber512, Kyber768, ChaChaPoly, Sha512, _>::new(
+    let mut alice = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, Sha512, _>::new(
         noise_pqnn(),
         &[],
         true,
@@ -24,7 +24,7 @@ fn main() {
     )
     .unwrap();
 
-    let mut bob = PqHandshake::<Kyber512, Kyber768, ChaChaPoly, Sha512, _>::new(
+    let mut bob = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, Sha512, _>::new(
         noise_pqnn(),
         &[],
         false,

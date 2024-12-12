@@ -1,4 +1,4 @@
-//! Kyber implementation by RustCrypto: https://github.com/RustCrypto/KEMs
+//! ML-KEM implementation by RustCrypto: https://github.com/RustCrypto/KEMs
 
 use ml_kem::kem::{Decapsulate, DecapsulationKey, Encapsulate, EncapsulationKey};
 use ml_kem::{EncodedSizeUser, KemCore, MlKem1024Params, MlKem512Params, MlKem768Params};
@@ -9,34 +9,34 @@ use crate::error::KemError;
 use crate::traits::{CryptoComponent, Kem};
 use crate::KeyPair;
 
-/// Kyber512 KEM implementation
-pub struct Kyber512;
-/// Kyber768 KEM implementation
-pub struct Kyber768;
-/// Kyber1024 KEM implementation
-pub struct Kyber1024;
+/// ML-KEM-512 KEM implementation
+pub struct MlKem512;
+/// ML-KEM-768 KEM implementation
+pub struct MlKem768;
+/// ML-KEM-1024 KEM implementation
+pub struct MlKem1024;
 
-impl CryptoComponent for Kyber512 {
+impl CryptoComponent for MlKem512 {
     fn name() -> &'static str {
-        "Kyber512"
+        "MLKEM512"
     }
 }
 
-impl CryptoComponent for Kyber768 {
+impl CryptoComponent for MlKem768 {
     fn name() -> &'static str {
-        "Kyber768"
+        "MLKEM768"
     }
 }
 
-impl CryptoComponent for Kyber1024 {
+impl CryptoComponent for MlKem1024 {
     fn name() -> &'static str {
-        "Kyber1024"
+        "MLKEM1024"
     }
 }
 
-macro_rules! impl_kyber {
-    ($kyber:ty, $params:ty, $sk:expr, $pk:expr, $ct:expr) => {
-        impl Kem for $kyber {
+macro_rules! impl_ml_kem {
+    ($ml_kem:ty, $params:ty, $sk:expr, $pk:expr, $ct:expr) => {
+        impl Kem for $ml_kem {
             #[cfg(feature = "alloc")]
             type SecretKey = SensitiveByteArray<crate::bytearray::HeapArray<$sk>>;
             #[cfg(not(feature = "alloc"))]
@@ -95,6 +95,6 @@ macro_rules! impl_kyber {
     };
 }
 
-impl_kyber!(Kyber512, MlKem512Params, 1632, 800, 768);
-impl_kyber!(Kyber768, MlKem768Params, 2400, 1184, 1088);
-impl_kyber!(Kyber1024, MlKem1024Params, 3168, 1568, 1568);
+impl_ml_kem!(MlKem512, MlKem512Params, 1632, 800, 768);
+impl_ml_kem!(MlKem768, MlKem768Params, 2400, 1184, 1088);
+impl_ml_kem!(MlKem1024, MlKem1024Params, 3168, 1568, 1568);
