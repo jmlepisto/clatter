@@ -1,4 +1,4 @@
-//! Symmetricstate implementation
+//! Symmetric state implementation
 //!
 //! [`SymmetricState`] is used during the handshake process to establish a cryptographic
 //! state for deriving transport keys once the handshake is completed.
@@ -10,7 +10,7 @@ use crate::cipherstate::{CipherState, CipherStates};
 use crate::error::CipherResult;
 use crate::traits::{Cipher, Hash};
 
-/// Symmetricstate used during handshakes to establish session hash and chaining key
+/// Symmetric state used during handshakes to establish session hash and chaining key
 #[derive(ZeroizeOnDrop, Zeroize)]
 pub struct SymmetricState<C, H>
 where
@@ -118,7 +118,7 @@ where
     /// Return [`CipherStates`] for encrypting and decrypting transport messages
     ///
     /// # Panics
-    /// * If no key material has been stablished
+    /// * If no key material has been established
     pub(crate) fn split(&self) -> CipherStates<C> {
         // This means that we are still in the initial state
         if self.ck == self.h {

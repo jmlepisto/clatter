@@ -1,4 +1,4 @@
-//! Transportstate implementation
+//! Transport state implementation
 //!
 //! [`TransportState`] is constructed from a [`Handshaker`] once the handshake
 //! is completed and it can be used for encrypting and decrypting transport
@@ -14,7 +14,7 @@ use crate::error::{HandshakeError, HandshakeResult, TransportError, TransportRes
 use crate::handshakepattern::HandshakePattern;
 use crate::traits::{Cipher, Handshaker, Hash};
 
-/// Transportstate used after a successful handshake
+/// Transport state used after a successful handshake
 ///
 /// Contains session keys for secure communication in the
 /// form of a [`CipherStates`] struct. Users have raw access
