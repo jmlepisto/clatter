@@ -1,5 +1,4 @@
 use arrayvec::ArrayVec;
-use rand_core::{CryptoRng, RngCore};
 use zeroize::Zeroize;
 
 use crate::bytearray::ByteArray;
@@ -8,7 +7,7 @@ use crate::constants::{MAX_PSKS, PSK_LEN};
 use crate::error::{HandshakeError, HandshakeResult};
 use crate::handshakepattern::{HandshakePattern, Token};
 use crate::symmetricstate::SymmetricState;
-use crate::traits::{Cipher, Hash};
+use crate::traits::{Cipher, Hash, Rng};
 use crate::KeyPair;
 
 pub mod dual_layer;
@@ -32,7 +31,7 @@ pub(crate) struct HandshakeInternals<'a, C, H, RNG, K, P, EK, EP>
 where
     C: Cipher,
     H: Hash,
-    RNG: RngCore + CryptoRng,
+    RNG: Rng,
     K: ByteArray,
     P: ByteArray,
     EK: ByteArray,
@@ -56,7 +55,7 @@ impl<'a, C, H, RNG, K, P, EK, EP> HandshakeInternals<'a, C, H, RNG, K, P, EK, EP
 where
     C: Cipher,
     H: Hash,
-    RNG: RngCore + CryptoRng,
+    RNG: Rng,
     K: ByteArray,
     P: ByteArray,
     EK: ByteArray,

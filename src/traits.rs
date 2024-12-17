@@ -1,7 +1,7 @@
 //! Common traits used throughout the crate
 
 use arrayvec::ArrayString;
-use rand_core::{CryptoRng, RngCore};
+pub use rand_core::{CryptoRng, RngCore};
 use zeroize::Zeroize;
 
 use crate::bytearray::ByteArray;
@@ -19,6 +19,16 @@ pub trait CryptoComponent {
     fn name() -> &'static str;
 }
 
+/// Common trait for compatible RNG sources
+///
+/// Automatically implemented for all types that implement:
+/// * [`RngCore`]
+/// * [`CryptoRng`]
+pub trait Rng: RngCore + CryptoRng {}
+
+/// Automatic implementation for all supported types
+impl<T: RngCore + CryptoRng> Rng for T {}
+
 /// Common trait for all Diffie-Hellman algorithms
 pub trait Dh: CryptoComponent {
     /// Private key type
@@ -29,9 +39,7 @@ pub trait Dh: CryptoComponent {
     type Output: ByteArray;
 
     /// Generate a keypair
-    fn genkey<R: RngCore + CryptoRng>(
-        rng: &mut R,
-    ) -> DhResult<KeyPair<Self::PubKey, Self::PrivateKey>>;
+    fn genkey<R: Rng>(rng: &mut R) -> DhResult<KeyPair<Self::PubKey, Self::PrivateKey>>;
 
     /// Extract public key from given private key
     fn pubkey(k: &Self::PrivateKey) -> Self::PubKey;
@@ -52,15 +60,10 @@ pub trait Kem: CryptoComponent {
     type Ss: ByteArray;
 
     /// Generate a keypair
-    fn genkey<R: RngCore + CryptoRng>(
-        rng: &mut R,
-    ) -> KemResult<KeyPair<Self::PubKey, Self::SecretKey>>;
+    fn genkey<R: Rng>(rng: &mut R) -> KemResult<KeyPair<Self::PubKey, Self::SecretKey>>;
 
     /// Encapsulate a public key and return the ciphertext and shared secret
-    fn encapsulate<R: RngCore + CryptoRng>(
-        pk: &[u8],
-        rng: &mut R,
-    ) -> KemResult<(Self::Ct, Self::Ss)>;
+    fn encapsulate<R: Rng>(pk: &[u8], rng: &mut R) -> KemResult<(Self::Ct, Self::Ss)>;
 
     /// Decapsulate ciphertext with secret key and return the shared secret
     fn decapsulate(ct: &[u8], sk: &[u8]) -> KemResult<Self::Ss>;

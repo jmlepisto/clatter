@@ -3,7 +3,6 @@
 use core::fmt::Write;
 
 use arrayvec::{ArrayString, ArrayVec};
-use rand_core::{CryptoRng, RngCore};
 
 use super::HandshakeInternals;
 use crate::bytearray::ByteArray;
@@ -12,7 +11,7 @@ use crate::error::{HandshakeError, HandshakeResult};
 use crate::handshakepattern::{HandshakePattern, Token};
 use crate::handshakestate::HandshakeStatus;
 use crate::symmetricstate::SymmetricState;
-use crate::traits::{Cipher, Dh, Handshaker, HandshakerInternal, Hash};
+use crate::traits::{Cipher, Dh, Handshaker, HandshakerInternal, Hash, Rng};
 use crate::KeyPair;
 
 /// Non-post-quantum Noise handshake
@@ -21,7 +20,7 @@ where
     DH: Dh,
     C: Cipher,
     H: Hash,
-    RNG: RngCore + CryptoRng,
+    RNG: Rng,
 {
     // Internal, we can live with this
     #[allow(clippy::type_complexity)]
@@ -34,7 +33,7 @@ where
     DH: Dh,
     CIPHER: Cipher,
     HASH: Hash,
-    RNG: RngCore + CryptoRng,
+    RNG: Rng,
 {
     /// Initialize new non-post-quantum handshake
     ///
@@ -211,7 +210,7 @@ where
     DH: Dh,
     C: Cipher,
     H: Hash,
-    RNG: RngCore + CryptoRng,
+    RNG: Rng,
 {
     fn status(&self) -> HandshakeStatus {
         self.internals.status()
@@ -397,7 +396,7 @@ where
     DH: Dh,
     C: Cipher,
     H: Hash,
-    RNG: RngCore + CryptoRng,
+    RNG: Rng,
 {
     type E = DH::PubKey;
     type S = DH::PubKey;

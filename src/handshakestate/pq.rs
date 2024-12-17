@@ -3,7 +3,6 @@
 use core::fmt::Write;
 
 use arrayvec::{ArrayString, ArrayVec};
-use rand_core::{CryptoRng, RngCore};
 
 use super::HandshakeInternals;
 use crate::bytearray::ByteArray;
@@ -13,7 +12,7 @@ use crate::error::{HandshakeError, HandshakeResult};
 use crate::handshakepattern::{HandshakePattern, Token};
 use crate::handshakestate::HandshakeStatus;
 use crate::symmetricstate::SymmetricState;
-use crate::traits::{Cipher, Handshaker, HandshakerInternal, Hash, Kem};
+use crate::traits::{Cipher, Handshaker, HandshakerInternal, Hash, Kem, Rng};
 use crate::KeyPair;
 
 /// Post-quantum Noise handshake
@@ -23,7 +22,7 @@ where
     SKEM: Kem,
     C: Cipher,
     H: Hash,
-    RNG: RngCore + CryptoRng,
+    RNG: Rng,
 {
     // Internal, we can live with this
     #[allow(clippy::type_complexity)]
@@ -45,7 +44,7 @@ where
     SKEM: Kem,
     CIPHER: Cipher,
     HASH: Hash,
-    RNG: RngCore + CryptoRng,
+    RNG: Rng,
 {
     /// Initialize new post-quantum handshake
     ///
@@ -190,7 +189,7 @@ where
     SKEM: Kem,
     C: Cipher,
     H: Hash,
-    RNG: RngCore + CryptoRng,
+    RNG: Rng,
 {
     fn status(&self) -> HandshakeStatus {
         self.internals.status()
@@ -434,7 +433,7 @@ where
     SKEM: Kem,
     C: Cipher,
     H: Hash,
-    RNG: RngCore + CryptoRng,
+    RNG: Rng,
 {
     type E = EKEM::PubKey;
     type S = SKEM::PubKey;
