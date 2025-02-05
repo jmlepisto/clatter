@@ -136,6 +136,9 @@ pub use handshakestate::pq::PqHandshake;
 pub use traits::Handshaker;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
+#[cfg(feature = "io")]
+pub mod io;
+
 /// Concrete crypto implementations
 pub mod crypto {
 
