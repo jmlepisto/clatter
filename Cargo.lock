@@ -129,6 +129,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "circular-buffer"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4dacb91f972298e70fc507a2ffcaf1545807f1a36da586fb846646030adc542f"
+dependencies = [
+ "embedded-io",
+]
+
+[[package]]
 name = "clatter"
 version = "1.1.0"
 dependencies = [
@@ -136,6 +145,7 @@ dependencies = [
  "arrayvec",
  "blake2",
  "chacha20poly1305",
+ "circular-buffer",
  "displaydoc",
  "embedded-io",
  "ml-kem",

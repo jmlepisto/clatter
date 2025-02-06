@@ -162,3 +162,119 @@ impl<C: Cipher, H: Hash, R: Read, W: Write, const BUF: usize> Write for IoAdapte
 // TODO: * small capacity channel with bufread
 // TODO: * big buf to read or write
 // TODO: * small io_buffer
+
+#[cfg(test)]
+mod tests {
+    extern crate alloc;
+
+    use alloc::rc::Rc;
+    use core::cell::RefCell;
+    use core::convert::Infallible;
+
+    use circular_buffer::CircularBuffer;
+    use embedded_io::{ErrorType, Read, Write};
+    use rand::rngs;
+
+    use crate::handshakepattern::noise_nn;
+    use crate::traits::{Cipher, Handshaker, Hash};
+    use crate::NqHandshake;
+    use crate::{
+        crypto::{cipher::ChaChaPoly, hash::Sha512},
+        crypto_impl::x25519::X25519,
+        transportstate::TransportState,
+    };
+
+    use super::IoAdapter;
+
+    fn mock_handshake<C: Cipher, H: Hash>() -> (TransportState<C, H>, TransportState<C, H>) {
+        let mut alice_rng = rngs::OsRng;
+        let mut bob_rng = rngs::OsRng;
+        // Instantiate initiator handshake
+        let mut alice = NqHandshake::<X25519, C, H, _>::new(
+            noise_nn(), // Handshake pattern
+            &[],        // Prologue data
+            true,       // Are we the initiator
+            None,       // Pre-shared keys..
+            None,       // ..
+            None,       // ..
+            None,       // ..
+            &mut alice_rng,
+        )
+        .unwrap();
+
+        let mut bob = NqHandshake::<X25519, C, H, _>::new(
+            noise_nn(), // Handshake pattern
+            &[],        // Prologue data
+            false,      // Are we the initiator
+            None,       // Pre-shared keys..
+            None,       // ..
+            None,       // ..
+            None,       // ..
+            &mut bob_rng,
+        )
+        .unwrap();
+
+        let mut buf = [0u8; 4096];
+        let n = alice.write_message(&[], &mut buf).unwrap();
+        let _ = bob.read_message(&buf[..n], &mut []).unwrap();
+        let n = bob.write_message(&[], &mut buf).unwrap();
+        let _ = alice.read_message(&buf[..n], &mut []).unwrap();
+
+        let transport_alice = alice.finalize().unwrap();
+        let transport_bob = bob.finalize().unwrap();
+        (transport_alice, transport_bob)
+    }
+
+    #[derive(Clone)]
+    struct WrapCircularBuffer<const N: usize>(Rc<RefCell<CircularBuffer<N, u8>>>);
+
+    impl<const N: usize> WrapCircularBuffer<N> {
+        fn new() -> Self {
+            Self(Rc::new(RefCell::new(CircularBuffer::<N, u8>::new())))
+        }
+    }
+
+    impl<const N: usize> ErrorType for WrapCircularBuffer<N> {
+        type Error = Infallible;
+    }
+    impl<const N: usize> Read for WrapCircularBuffer<N> {
+        fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
+            (*self.0).borrow_mut().read(buf)
+        }
+    }
+    impl<const N: usize> Write for WrapCircularBuffer<N> {
+        fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+            (*self.0).borrow_mut().write(buf)
+        }
+
+        fn flush(&mut self) -> Result<(), Self::Error> {
+            (*self.0).borrow_mut().flush()
+        }
+    }
+
+    #[test]
+    fn simple_test() {
+        let alice_comm_buf = WrapCircularBuffer::<1000>::new();
+        let bob_comm_buf = WrapCircularBuffer::<1000>::new();
+
+        let (alice_transport, bob_transport) = mock_handshake::<ChaChaPoly, Sha512>();
+
+        let mut alice_io_adapter = IoAdapter::<_, _, _, _, 1000>::new_with_transport_state(
+            alice_transport,
+            alice_comm_buf.clone(),
+            bob_comm_buf.clone(),
+        );
+
+        let mut bob_io_adapter = IoAdapter::<_, _, _, _, 1000>::new_with_transport_state(
+            bob_transport,
+            bob_comm_buf.clone(),
+            alice_comm_buf.clone(),
+        );
+
+        let mut test_buf = [0u8; 100];
+        alice_io_adapter.write(b"hi").unwrap();
+        let n = bob_io_adapter.read(&mut test_buf).unwrap();
+        assert_eq!(n, 2);
+        assert_eq!(&test_buf[..2], b"hi");
+    }
+}

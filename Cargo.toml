@@ -86,6 +86,7 @@ embedded-io = { version = "0.6.1", default-features = false, optional = true }
 
 [dev-dependencies]
 rand = "0.8.5"
+circular-buffer = { version = "1.0.0", default-features = false, features = ["embedded-io"] }
 
 [workspace]
 members = ["fuzz", "vectors"]
