@@ -25,11 +25,11 @@ impl<W: Write, const BUF: usize> ErrorType for WriteAdapterInner<W, BUF> {
 impl<W: Write, const BUF: usize> WriteAdapterInner<W, BUF> {
     // This fails to compile if BUF is too big.
     // Thus, it is a compile time check that BUF is reasonable.
-    const _CHECK: usize = MAX_MESSAGE_LEN - BUF;
+    const _CHECK: usize = MAX_MESSAGE_LEN.checked_sub(BUF).unwrap();
 
     /// MTU is equal to the size of the buffer minus MAX_TAG_LEN for the tag
     // TODO: MAX_TAG_LEN needs to be just TAG_LEN since the Noise framework force it to be 16 bytes
-    const MTU: usize = BUF - MAX_TAG_LEN;
+    const MTU: usize = BUF.checked_sub(MAX_TAG_LEN).unwrap();
 
     pub(crate) fn new(writer: W) -> Self {
         Self {

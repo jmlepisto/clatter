@@ -26,7 +26,7 @@ impl<R: Read, const BUF: usize> ErrorType for ReadAdapterInner<R, BUF> {
 impl<R: Read, const BUF: usize> ReadAdapterInner<R, BUF> {
     // This fails to compile if BUF is too big.
     // Thus, it is a compile time check that BUF is reasonable.
-    const _CHECK: usize = MAX_MESSAGE_LEN - BUF;
+    const _CHECK: usize = MAX_MESSAGE_LEN.checked_sub(BUF).unwrap();
 
     pub(crate) fn new(reader: R) -> Self {
         Self {
