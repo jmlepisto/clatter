@@ -175,8 +175,8 @@ mod tests {
     use embedded_io::{ErrorType, Read, Write};
     use rand::rngs;
 
-    use crate::handshakepattern::noise_nn;
-    use crate::traits::{Cipher, Handshaker, Hash};
+    use crate::handshakepattern::{noise_nn, HandshakePattern};
+    use crate::traits::{Cipher, Dh, Handshaker, Hash};
     use crate::NqHandshake;
     use crate::{
         crypto::{cipher::ChaChaPoly, hash::Sha512},
@@ -186,45 +186,59 @@ mod tests {
 
     use super::IoAdapter;
 
-    fn mock_handshake<C: Cipher, H: Hash>() -> (TransportState<C, H>, TransportState<C, H>) {
+    /// Interleave read and writes to complete the handshake
+    /// and return both transport state (initiator and responder).
+    ///
+    /// Use classical (non post-quantic) handshake
+    fn handshake<DH: Dh, C: Cipher, H: Hash>(
+        pattern: HandshakePattern,
+    ) -> (TransportState<C, H>, TransportState<C, H>) {
         let mut alice_rng = rngs::OsRng;
         let mut bob_rng = rngs::OsRng;
         // Instantiate initiator handshake
-        let mut alice = NqHandshake::<X25519, C, H, _>::new(
-            noise_nn(), // Handshake pattern
-            &[],        // Prologue data
-            true,       // Are we the initiator
-            None,       // Pre-shared keys..
-            None,       // ..
-            None,       // ..
-            None,       // ..
+        let mut alice = NqHandshake::<DH, C, H, _>::new(
+            pattern.clone(), // Handshake pattern
+            &[],             // Prologue data
+            true,            // Are we the initiator
+            None,            // Pre-shared keys..
+            None,            // ..
+            None,            // ..
+            None,            // ..
             &mut alice_rng,
         )
         .unwrap();
 
         let mut bob = NqHandshake::<X25519, C, H, _>::new(
-            noise_nn(), // Handshake pattern
-            &[],        // Prologue data
-            false,      // Are we the initiator
-            None,       // Pre-shared keys..
-            None,       // ..
-            None,       // ..
-            None,       // ..
+            pattern, // Handshake pattern
+            &[],     // Prologue data
+            false,   // Are we the initiator
+            None,    // Pre-shared keys..
+            None,    // ..
+            None,    // ..
+            None,    // ..
             &mut bob_rng,
         )
         .unwrap();
 
         let mut buf = [0u8; 4096];
-        let n = alice.write_message(&[], &mut buf).unwrap();
-        let _ = bob.read_message(&buf[..n], &mut []).unwrap();
-        let n = bob.write_message(&[], &mut buf).unwrap();
-        let _ = alice.read_message(&buf[..n], &mut []).unwrap();
+        while !alice.is_finished() || !bob.is_finished() {
+            if alice.is_write_turn() {
+                let n = alice.write_message(&[], &mut buf).unwrap();
+                bob.read_message(&buf[..n], &mut []).unwrap();
+            } else {
+                let n = bob.write_message(&[], &mut buf).unwrap();
+                alice.read_message(&buf[..n], &mut []).unwrap();
+            }
+        }
 
         let transport_alice = alice.finalize().unwrap();
         let transport_bob = bob.finalize().unwrap();
         (transport_alice, transport_bob)
     }
 
+    /// Define this newtype to implement Read+Write on a circular buffer with mutable shared ownership.
+    /// In real cases, we should be fine with the adapter taking ownership of the reader/writer;
+    /// however in tests, since everything is in the same process, we need shared ownership.
     #[derive(Clone)]
     struct WrapCircularBuffer<const N: usize>(Rc<RefCell<CircularBuffer<N, u8>>>);
 
@@ -257,24 +271,28 @@ mod tests {
         let alice_comm_buf = WrapCircularBuffer::<1000>::new();
         let bob_comm_buf = WrapCircularBuffer::<1000>::new();
 
-        let (alice_transport, bob_transport) = mock_handshake::<ChaChaPoly, Sha512>();
+        let (alice_transport, bob_transport) = handshake::<X25519, ChaChaPoly, Sha512>(noise_nn());
 
-        let mut alice_io_adapter = IoAdapter::<_, _, _, _, 1000>::new_with_transport_state(
+        let mut alice_io_adapter = IoAdapter::<_, _, _, _, 18>::new_with_transport_state(
             alice_transport,
             alice_comm_buf.clone(),
             bob_comm_buf.clone(),
         );
 
-        let mut bob_io_adapter = IoAdapter::<_, _, _, _, 1000>::new_with_transport_state(
+        let mut bob_io_adapter = IoAdapter::<_, _, _, _, 18>::new_with_transport_state(
             bob_transport,
             bob_comm_buf.clone(),
             alice_comm_buf.clone(),
         );
 
         let mut test_buf = [0u8; 100];
-        alice_io_adapter.write(b"hi").unwrap();
-        let n = bob_io_adapter.read(&mut test_buf).unwrap();
-        assert_eq!(n, 2);
-        assert_eq!(&test_buf[..2], b"hi");
+        let data = b"But every knight has a horse";
+        // This will perform multiple writes due to small IoAdapter buffer
+        alice_io_adapter.write_all(data).unwrap();
+        // This will perform multiple reads due to small IoAdapter buffer
+        bob_io_adapter
+            .read_exact(&mut test_buf[..data.len()])
+            .unwrap();
+        assert_eq!(&test_buf[..data.len()], data);
     }
 }
