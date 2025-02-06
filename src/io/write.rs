@@ -66,7 +66,7 @@ impl<C: Cipher, H: Hash, W: Write, HS: Handshaker<C, H>, const BUF: usize>
         // First, send the message length.
         self.writer
             // try_from is infallible since msg_len is guaranteed to be < MAX_MESSAGE_LEN = 2**16
-            .write_all(&u16::try_from(msg_len).unwrap().to_le_bytes())
+            .write_all(&u16::try_from(msg_len).unwrap().to_be_bytes())
             .map_err(WriteAdapterError::Write)?;
 
         // Finally, send the actual message.
