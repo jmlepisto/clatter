@@ -73,8 +73,8 @@ fn try_new_transport<C: Cipher, H: Hash, R: Read, W: Write, HS: Handshaker<C, H>
 /// with a 16-bits big-endian length field prior to each transport message.
 pub struct IoAdapter<C: Cipher, H: Hash, R: Read, W: Write, const BUF: usize> {
     transport_state: TransportState<C, H>,
-    inner_read: ReadAdapterInner<C, H, R, BUF>,
-    inner_write: WriteAdapterInner<C, H, W, BUF>,
+    inner_read: ReadAdapterInner<R, BUF>,
+    inner_write: WriteAdapterInner<W, BUF>,
 }
 
 // TODO: Typestate every message pattern, this would allow easier read

@@ -1,5 +1,4 @@
 //! Implementation of the [`embedded_io::Write`] adapter.
-use core::marker::PhantomData;
 
 use embedded_io::{ErrorType, Read, Write};
 
@@ -14,17 +13,16 @@ use super::{
     try_new_transport,
 };
 
-pub(crate) struct WriteAdapterInner<C: Cipher, H: Hash, W: Write, const BUF: usize> {
+pub(crate) struct WriteAdapterInner<W: Write, const BUF: usize> {
     writer: W,
     write_buffer: [u8; BUF],
-    _phantom: PhantomData<(C, H)>,
 }
 
-impl<C: Cipher, H: Hash, W: Write, const BUF: usize> ErrorType for WriteAdapterInner<C, H, W, BUF> {
+impl<W: Write, const BUF: usize> ErrorType for WriteAdapterInner<W, BUF> {
     type Error = WriteAdapterError<W::Error>;
 }
 
-impl<C: Cipher, H: Hash, W: Write, const BUF: usize> WriteAdapterInner<C, H, W, BUF> {
+impl<W: Write, const BUF: usize> WriteAdapterInner<W, BUF> {
     // This fails to compile if BUF is too big.
     // Thus, it is a compile time check that BUF is reasonable.
     const _CHECK: usize = MAX_MESSAGE_LEN - BUF;
@@ -37,11 +35,10 @@ impl<C: Cipher, H: Hash, W: Write, const BUF: usize> WriteAdapterInner<C, H, W, 
         Self {
             writer,
             write_buffer: [0u8; BUF],
-            _phantom: PhantomData,
         }
     }
 
-    pub(crate) fn write_with_transport_state(
+    pub(crate) fn write_with_transport_state<C: Cipher, H: Hash>(
         &mut self,
         buf: &[u8],
         transport_state: &mut TransportState<C, H>,
@@ -79,7 +76,7 @@ impl<C: Cipher, H: Hash, W: Write, const BUF: usize> WriteAdapterInner<C, H, W, 
 /// with a 16-bits big-endian length field prior to each transport message.
 pub struct WriteAdapter<C: Cipher, H: Hash, W: Write, const BUF: usize> {
     transport_state: TransportState<C, H>,
-    inner: WriteAdapterInner<C, H, W, BUF>,
+    inner: WriteAdapterInner<W, BUF>,
 }
 
 impl<C: Cipher, H: Hash, W: Write, const BUF: usize> WriteAdapter<C, H, W, BUF> {

@@ -1,5 +1,4 @@
 //! Implementation of the [`embedded_io::Read`] adapter.
-use core::marker::PhantomData;
 
 use embedded_io::{ErrorType, Read, ReadExactError, Write};
 
@@ -14,18 +13,17 @@ use super::{
     try_new_transport,
 };
 
-pub(crate) struct ReadAdapterInner<C: Cipher, H: Hash, R: Read, const BUF: usize> {
+pub(crate) struct ReadAdapterInner<R: Read, const BUF: usize> {
     reader: R,
     read_buffer: [u8; BUF],
     available_to_read: usize,
-    _phantom: PhantomData<(C, H)>,
 }
 
-impl<C: Cipher, H: Hash, R: Read, const BUF: usize> ErrorType for ReadAdapterInner<C, H, R, BUF> {
+impl<R: Read, const BUF: usize> ErrorType for ReadAdapterInner<R, BUF> {
     type Error = ReadAdapterError<R::Error>;
 }
 
-impl<C: Cipher, H: Hash, R: Read, const BUF: usize> ReadAdapterInner<C, H, R, BUF> {
+impl<R: Read, const BUF: usize> ReadAdapterInner<R, BUF> {
     // This fails to compile if BUF is too big.
     // Thus, it is a compile time check that BUF is reasonable.
     const _CHECK: usize = MAX_MESSAGE_LEN - BUF;
@@ -35,11 +33,10 @@ impl<C: Cipher, H: Hash, R: Read, const BUF: usize> ReadAdapterInner<C, H, R, BU
             reader,
             read_buffer: [0u8; BUF],
             available_to_read: 0,
-            _phantom: PhantomData,
         }
     }
 
-    pub(crate) fn read_with_transport_state(
+    pub(crate) fn read_with_transport_state<C: Cipher, H: Hash>(
         &mut self,
         buf: &mut [u8],
         transport_state: &mut TransportState<C, H>,
@@ -106,7 +103,7 @@ impl<C: Cipher, H: Hash, R: Read, const BUF: usize> ReadAdapterInner<C, H, R, BU
 /// transport message.
 pub struct ReadAdapter<C: Cipher, H: Hash, R: Read, const BUF: usize> {
     transport_state: TransportState<C, H>,
-    inner: ReadAdapterInner<C, H, R, BUF>,
+    inner: ReadAdapterInner<R, BUF>,
 }
 
 impl<C: Cipher, H: Hash, R: Read, const BUF: usize> ReadAdapter<C, H, R, BUF> {
