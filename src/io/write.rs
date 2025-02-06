@@ -61,7 +61,7 @@ impl<W: Write, const BUF: usize> WriteAdapterInner<W, BUF> {
             .write_all(&self.write_buffer[..msg_len])
             .map_err(WriteAdapterError::Write)?;
 
-        Ok(msg_len)
+        Ok(to_send.len())
     }
 
     pub(crate) fn flush(&mut self) -> Result<(), <Self as ErrorType>::Error> {
