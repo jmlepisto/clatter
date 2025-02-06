@@ -14,28 +14,18 @@ use super::{
     try_new_transport,
 };
 
-pub(crate) struct ReadAdapterInner<
-    C: Cipher,
-    H: Hash,
-    R: Read,
-    HS: Handshaker<C, H>,
-    const BUF: usize,
-> {
+pub(crate) struct ReadAdapterInner<C: Cipher, H: Hash, R: Read, const BUF: usize> {
     reader: R,
     read_buffer: [u8; BUF],
     available_to_read: usize,
-    _phantom: PhantomData<(C, H, HS)>,
+    _phantom: PhantomData<(C, H)>,
 }
 
-impl<C: Cipher, H: Hash, R: Read, HS: Handshaker<C, H>, const BUF: usize> ErrorType
-    for ReadAdapterInner<C, H, R, HS, BUF>
-{
+impl<C: Cipher, H: Hash, R: Read, const BUF: usize> ErrorType for ReadAdapterInner<C, H, R, BUF> {
     type Error = ReadAdapterError<R::Error>;
 }
 
-impl<C: Cipher, H: Hash, R: Read, HS: Handshaker<C, H>, const BUF: usize>
-    ReadAdapterInner<C, H, R, HS, BUF>
-{
+impl<C: Cipher, H: Hash, R: Read, const BUF: usize> ReadAdapterInner<C, H, R, BUF> {
     // This fails to compile if BUF is too big.
     // Thus, it is a compile time check that BUF is reasonable.
     const _CHECK: usize = MAX_MESSAGE_LEN - BUF;
@@ -114,14 +104,12 @@ impl<C: Cipher, H: Hash, R: Read, HS: Handshaker<C, H>, const BUF: usize>
 /// boundaries, message length is assumed to be encoded as recommended in Section 13
 /// of the Noise specification: with a 16-bits big-endian length field prior to each
 /// transport message.
-pub struct ReadAdapter<C: Cipher, H: Hash, R: Read, HS: Handshaker<C, H>, const BUF: usize> {
+pub struct ReadAdapter<C: Cipher, H: Hash, R: Read, const BUF: usize> {
     transport_state: TransportState<C, H>,
-    inner: ReadAdapterInner<C, H, R, HS, BUF>,
+    inner: ReadAdapterInner<C, H, R, BUF>,
 }
 
-impl<C: Cipher, H: Hash, R: Read, HS: Handshaker<C, H>, const BUF: usize>
-    ReadAdapter<C, H, R, HS, BUF>
-{
+impl<C: Cipher, H: Hash, R: Read, const BUF: usize> ReadAdapter<C, H, R, BUF> {
     /// Try to construct a new read adapter
     ///
     /// Perform a handshake using the given [`crate::traits::Handshaker`] using the provided
@@ -141,7 +129,7 @@ impl<C: Cipher, H: Hash, R: Read, HS: Handshaker<C, H>, const BUF: usize>
     /// # Errors
     /// * [`ReadWriteAdapter::ReadAdapterError`] or [`ReadWriteAdapter::WriteAdapterError`] - The underlying reader or writer failed.
     /// * [`ReadWriteAdapterError::HandshakeError`] - There was a problem during the handshake (eg. the provided buffer is too small).
-    pub fn try_new<W: Write>(
+    pub fn try_new<HS: Handshaker<C, H>, W: Write>(
         hs: HS,
         mut reader: R,
         mut writer: W,
@@ -154,15 +142,11 @@ impl<C: Cipher, H: Hash, R: Read, HS: Handshaker<C, H>, const BUF: usize>
     }
 }
 
-impl<C: Cipher, H: Hash, R: Read, HS: Handshaker<C, H>, const BUF: usize> ErrorType
-    for ReadAdapter<C, H, R, HS, BUF>
-{
+impl<C: Cipher, H: Hash, R: Read, const BUF: usize> ErrorType for ReadAdapter<C, H, R, BUF> {
     type Error = ReadAdapterError<R::Error>;
 }
 
-impl<C: Cipher, H: Hash, R: Read, HS: Handshaker<C, H>, const BUF: usize> Read
-    for ReadAdapter<C, H, R, HS, BUF>
-{
+impl<C: Cipher, H: Hash, R: Read, const BUF: usize> Read for ReadAdapter<C, H, R, BUF> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
         self.inner
             .read_with_transport_state(buf, &mut self.transport_state)

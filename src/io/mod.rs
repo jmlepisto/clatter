@@ -71,19 +71,16 @@ fn try_new_transport<C: Cipher, H: Hash, R: Read, W: Write, HS: Handshaker<C, H>
 /// Since [`embedded_io::Read`] and [`embedded_io::Write`] interfaces do not provide a way to know message
 /// boundaries, message length is encoded as recommended in Section 13 of the Noise specification:
 /// with a 16-bits big-endian length field prior to each transport message.
-pub struct IoAdapter<C: Cipher, H: Hash, R: Read, W: Write, HS: Handshaker<C, H>, const BUF: usize>
-{
+pub struct IoAdapter<C: Cipher, H: Hash, R: Read, W: Write, const BUF: usize> {
     transport_state: TransportState<C, H>,
-    inner_read: ReadAdapterInner<C, H, R, HS, BUF>,
-    inner_write: WriteAdapterInner<C, H, W, HS, BUF>,
+    inner_read: ReadAdapterInner<C, H, R, BUF>,
+    inner_write: WriteAdapterInner<C, H, W, BUF>,
 }
 
 // TODO: Typestate every message pattern, this would allow easier read
 // TODO: Implement Async{Read,Write) from embedded-io-async
-impl<C: Cipher, H: Hash, R: Read, W: Write, HS: Handshaker<C, H>, const BUF: usize>
-    IoAdapter<C, H, R, W, HS, BUF>
-{
-    /// Try to construct a new read and write adapter
+impl<C: Cipher, H: Hash, R: Read, W: Write, const BUF: usize> IoAdapter<C, H, R, W, BUF> {
+    /// Try to construct a new read and write adapter by performing a handshake.
     ///
     /// Perform a handshake using the given [`crate::traits::Handshaker`] using the provided
     /// `reader` and `writer`. To perform the handshake, this needs an additional
@@ -102,7 +99,7 @@ impl<C: Cipher, H: Hash, R: Read, W: Write, HS: Handshaker<C, H>, const BUF: usi
     /// # Errors
     /// * [`ReadWriteAdapter::ReadAdapterError`] or [`ReadWriteAdapter::WriteAdapterError`] - The underlying reader or writer failed.
     /// * [`ReadWriteAdapterError::HandshakeError`] - There was a problem during the handshake (eg. the provided buffer is too small).
-    pub fn try_new(
+    pub fn try_with_handshake<HS: Handshaker<C, H>>(
         hs: HS,
         mut reader: R,
         mut writer: W,
@@ -114,26 +111,40 @@ impl<C: Cipher, H: Hash, R: Read, W: Write, HS: Handshaker<C, H>, const BUF: usi
             inner_write: WriteAdapterInner::new(writer),
         })
     }
+
+    /// Construct a new read and write adapter from a provided transport state.
+    ///
+    /// # Arguments
+    /// * `transport_state` - A transport state (handshake already done)
+    /// * `reader` - A reader implementing [`embedded_io::Read`], to receive the messages
+    /// * `writer` - A writer implementing [`embedded_io::Write`] to send the messages
+    pub fn new_with_transport_state(
+        transport_state: TransportState<C, H>,
+        reader: R,
+        writer: W,
+    ) -> Self {
+        Self {
+            transport_state,
+            inner_read: ReadAdapterInner::new(reader),
+            inner_write: WriteAdapterInner::new(writer),
+        }
+    }
 }
 
-impl<C: Cipher, H: Hash, R: Read, W: Write, HS: Handshaker<C, H>, const BUF: usize> ErrorType
-    for IoAdapter<C, H, R, W, HS, BUF>
+impl<C: Cipher, H: Hash, R: Read, W: Write, const BUF: usize> ErrorType
+    for IoAdapter<C, H, R, W, BUF>
 {
     type Error = ReadWriteAdapterError<R::Error, W::Error>;
 }
 
-impl<C: Cipher, H: Hash, R: Read, W: Write, HS: Handshaker<C, H>, const BUF: usize> Read
-    for IoAdapter<C, H, R, W, HS, BUF>
-{
+impl<C: Cipher, H: Hash, R: Read, W: Write, const BUF: usize> Read for IoAdapter<C, H, R, W, BUF> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
         self.inner_read
             .read_with_transport_state(buf, &mut self.transport_state)
             .map_err(ReadWriteAdapterError::ReadAdapter)
     }
 }
-impl<C: Cipher, H: Hash, R: Read, W: Write, HS: Handshaker<C, H>, const BUF: usize> Write
-    for IoAdapter<C, H, R, W, HS, BUF>
-{
+impl<C: Cipher, H: Hash, R: Read, W: Write, const BUF: usize> Write for IoAdapter<C, H, R, W, BUF> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
         self.inner_write
             .write_with_transport_state(buf, &mut self.transport_state)

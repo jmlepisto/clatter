@@ -14,27 +14,17 @@ use super::{
     try_new_transport,
 };
 
-pub(crate) struct WriteAdapterInner<
-    C: Cipher,
-    H: Hash,
-    W: Write,
-    HS: Handshaker<C, H>,
-    const BUF: usize,
-> {
+pub(crate) struct WriteAdapterInner<C: Cipher, H: Hash, W: Write, const BUF: usize> {
     writer: W,
     write_buffer: [u8; BUF],
-    _phantom: PhantomData<(C, H, HS)>,
+    _phantom: PhantomData<(C, H)>,
 }
 
-impl<C: Cipher, H: Hash, W: Write, HS: Handshaker<C, H>, const BUF: usize> ErrorType
-    for WriteAdapterInner<C, H, W, HS, BUF>
-{
+impl<C: Cipher, H: Hash, W: Write, const BUF: usize> ErrorType for WriteAdapterInner<C, H, W, BUF> {
     type Error = WriteAdapterError<W::Error>;
 }
 
-impl<C: Cipher, H: Hash, W: Write, HS: Handshaker<C, H>, const BUF: usize>
-    WriteAdapterInner<C, H, W, HS, BUF>
-{
+impl<C: Cipher, H: Hash, W: Write, const BUF: usize> WriteAdapterInner<C, H, W, BUF> {
     // This fails to compile if BUF is too big.
     // Thus, it is a compile time check that BUF is reasonable.
     const _CHECK: usize = MAX_MESSAGE_LEN - BUF;
@@ -87,14 +77,12 @@ impl<C: Cipher, H: Hash, W: Write, HS: Handshaker<C, H>, const BUF: usize>
 /// Since [`embedded_io::Write`] interface do not provide a way to set message
 /// boundaries, message length is encoded as recommended in Section 13 of the Noise specification:
 /// with a 16-bits big-endian length field prior to each transport message.
-pub struct WriteAdapter<C: Cipher, H: Hash, W: Write, HS: Handshaker<C, H>, const BUF: usize> {
+pub struct WriteAdapter<C: Cipher, H: Hash, W: Write, const BUF: usize> {
     transport_state: TransportState<C, H>,
-    inner: WriteAdapterInner<C, H, W, HS, BUF>,
+    inner: WriteAdapterInner<C, H, W, BUF>,
 }
 
-impl<C: Cipher, H: Hash, W: Write, HS: Handshaker<C, H>, const BUF: usize>
-    WriteAdapter<C, H, W, HS, BUF>
-{
+impl<C: Cipher, H: Hash, W: Write, const BUF: usize> WriteAdapter<C, H, W, BUF> {
     /// Try to construct a new write adapter
     ///
     /// Perform a handshake using the given [`crate::traits::Handshaker`] using the provided
@@ -114,7 +102,7 @@ impl<C: Cipher, H: Hash, W: Write, HS: Handshaker<C, H>, const BUF: usize>
     /// # Errors
     /// * [`ReadWriteAdapter::ReadAdapterError`] or [`ReadWriteAdapter::WriteAdapterError`] - The underlying reader or writer failed.
     /// * [`ReadWriteAdapterError::HandshakeError`] - There was a problem during the handshake (eg. the provided buffer is too small).
-    pub fn try_new<R: Read>(
+    pub fn try_new<HS: Handshaker<C, H>, R: Read>(
         hs: HS,
         mut reader: R,
         mut writer: W,
@@ -127,15 +115,11 @@ impl<C: Cipher, H: Hash, W: Write, HS: Handshaker<C, H>, const BUF: usize>
     }
 }
 
-impl<C: Cipher, H: Hash, W: Write, HS: Handshaker<C, H>, const BUF: usize> ErrorType
-    for WriteAdapter<C, H, W, HS, BUF>
-{
+impl<C: Cipher, H: Hash, W: Write, const BUF: usize> ErrorType for WriteAdapter<C, H, W, BUF> {
     type Error = WriteAdapterError<W::Error>;
 }
 
-impl<C: Cipher, H: Hash, W: Write, HS: Handshaker<C, H>, const BUF: usize> Write
-    for WriteAdapter<C, H, W, HS, BUF>
-{
+impl<C: Cipher, H: Hash, W: Write, const BUF: usize> Write for WriteAdapter<C, H, W, BUF> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
         self.inner
             .write_with_transport_state(buf, &mut self.transport_state)
