@@ -3,7 +3,6 @@
 use embedded_io::{ErrorType, Read, ReadExactError, Write};
 
 use crate::{
-    constants::MAX_MESSAGE_LEN,
     traits::{Cipher, Handshaker, Hash},
     transportstate::TransportState,
 };
@@ -24,10 +23,6 @@ impl<R: Read, const BUF: usize> ErrorType for ReadAdapterInner<R, BUF> {
 }
 
 impl<R: Read, const BUF: usize> ReadAdapterInner<R, BUF> {
-    // This fails to compile if BUF is too big.
-    // Thus, it is a compile time check that BUF is reasonable.
-    const _CHECK: usize = MAX_MESSAGE_LEN.checked_sub(BUF).unwrap();
-
     pub(crate) fn new(reader: R) -> Self {
         Self {
             reader,
