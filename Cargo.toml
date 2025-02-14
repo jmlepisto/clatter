@@ -57,6 +57,7 @@ use-chacha20poly1305 = ["chacha20poly1305"]
 use-pqclean-kyber = ["pqcrypto-kyber", "pqcrypto-traits"]
 use-rust-crypto-ml-kem = ["ml-kem"]
 use-25519 = ["x25519-dalek"]
+io = ["embedded-io"]
 
 # docs.rs-specific configuration
 [package.metadata.docs.rs]
@@ -81,9 +82,11 @@ x25519-dalek = { version = "2.0.1", default-features = false, features = ["stati
 pqcrypto-kyber = { version = "0.8.1", default-features = false, optional = true }
 pqcrypto-traits = { version = "0.3.5", default-features = false, optional = true }
 displaydoc = { version = "0.2.5", default-features = false }
+embedded-io = { version = "0.6.1", default-features = false, optional = true }
 
 [dev-dependencies]
 rand = "0.8.5"
+circular-buffer = { version = "1.0.0", default-features = false, features = ["embedded-io"] }
 
 [workspace]
 members = ["fuzz", "vectors"]
