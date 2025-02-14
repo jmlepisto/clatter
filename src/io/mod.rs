@@ -251,11 +251,13 @@ mod tests {
     impl<const N: usize> ErrorType for WrapCircularBuffer<N> {
         type Error = Infallible;
     }
+
     impl<const N: usize> Read for WrapCircularBuffer<N> {
         fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
             (*self.0).borrow_mut().read(buf)
         }
     }
+
     impl<const N: usize> Write for WrapCircularBuffer<N> {
         fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
             (*self.0).borrow_mut().write(buf)

@@ -1,5 +1,7 @@
 //! Implementation of the [`embedded_io::Write`] adapter.
 
+use core::num::NonZeroUsize;
+
 use embedded_io::{ErrorType, Read, Write};
 
 use crate::{
@@ -29,7 +31,7 @@ impl<W: Write, const BUF: usize> WriteAdapterInner<W, BUF> {
 
     /// MTU is equal to the size of the buffer minus MAX_TAG_LEN for the tag
     // TODO: MAX_TAG_LEN needs to be just TAG_LEN since the Noise framework force it to be 16 bytes
-    const MTU: usize = BUF.checked_sub(MAX_TAG_LEN).unwrap();
+    const MTU: NonZeroUsize = NonZeroUsize::new(BUF.checked_sub(MAX_TAG_LEN).unwrap()).unwrap();
 
     pub(crate) fn new(writer: W) -> Self {
         Self {
@@ -43,7 +45,7 @@ impl<W: Write, const BUF: usize> WriteAdapterInner<W, BUF> {
         buf: &[u8],
         transport_state: &mut TransportState<C, H>,
     ) -> Result<usize, <Self as ErrorType>::Error> {
-        let to_send = &buf[..buf.len().min(Self::MTU)];
+        let to_send = &buf[..buf.len().min(Self::MTU.into())];
 
         // Encrypt the part of the input buffer we will actually send.
         let msg_len = transport_state
