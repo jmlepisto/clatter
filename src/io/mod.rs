@@ -2,6 +2,24 @@
 //!
 //! Provide a way to build an object that is [`embedded_io::Read`] and [`embedded_io::Write`] with a transport state
 //! set up, from another [`embedded_io::Read`] and [`embedded_io::Write`] object (eg. a TCP socket).
+//!
+//! # Example
+//!
+//! Given an already established [`crate::transportstate::TransportState`] you can build
+//! on top of an already insecure channel (eg. a pair ([`esp_hal::uart::UartRx`], [`esp_hal::uart::UartTx`]))
+//! a secure channel with [`IoAdapter`]:
+//!
+//! ```no_run
+//! // Estasblish a new transport state...
+//! let transport_state = TransportState::new(...);
+//!
+//! // Retrieve a pair of reader and writer
+//! let rx, tx = ...;
+//!
+//!//! // Instantiate a new [`IoAdapter`]
+//! let channel = IoAdapter::new_with_transport_state(transport_state, rx, tx);
+//!
+//! ```
 
 use embedded_io::{ErrorType, Read, Write};
 use error::{ReadAdapterError, ReadWriteAdapterError, WriteAdapterError};
@@ -32,8 +50,8 @@ pub use write::WriteAdapter;
 /// * `handshake_buffer` - A buffer big enough to hold the biggest message during the handshake.
 ///
 /// # Errors
-/// * [`AdapterError::ReadError`] or [`AdapterError::WriteError`] - The underlying reader or writer failed.
-/// * [`AdapterError::HandshakeError`] - There was a problem during the handshake (eg. the provided buffer is too small).
+/// * [`ReadWriteAdapterError::ReadError`] or [`ReadWriteAdapterError::WriteError`] - The underlying reader or writer failed.
+/// * [`ReadWriteAdapterError::Handshake`] - There was a problem during the handshake (eg. the provided buffer is too small).
 // TODO: Add marker traits for: {OneWay,Interactive}Handshake (for single {Reader,Writer}Adapter), and {PQ,NQ}Handshake (instead of is_oneway and is_kem)
 // TODO: Statically computed size (to avoid manipulating buffer)
 // TODO: Implement Split from the Noise Specification
@@ -97,8 +115,8 @@ impl<C: Cipher, H: Hash, R: Read, W: Write, const BUF: usize> IoAdapter<C, H, R,
     /// * `handshake_buffer` - A buffer big enough to hold the biggest message during the handshake.
     ///
     /// # Errors
-    /// * [`ReadWriteAdapter::ReadAdapterError`] or [`ReadWriteAdapter::WriteAdapterError`] - The underlying reader or writer failed.
-    /// * [`ReadWriteAdapterError::HandshakeError`] - There was a problem during the handshake (eg. the provided buffer is too small).
+    /// * [`ReadWriteAdapterError::ReadAdapter`] or [`ReadWriteAdapterError::WriteAdapter`] - The underlying reader or writer failed.
+    /// * [`ReadWriteAdapterError::Handshake`] - There was a problem during the handshake (eg. the provided buffer is too small).
     pub fn try_with_handshake<HS: Handshaker<C, H>>(
         hs: HS,
         mut reader: R,

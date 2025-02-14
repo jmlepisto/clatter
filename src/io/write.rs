@@ -95,8 +95,8 @@ impl<C: Cipher, H: Hash, W: Write, const BUF: usize> WriteAdapter<C, H, W, BUF> 
     /// * `handshake_buffer` - A buffer big enough to hold the biggest message during the handshake.
     ///
     /// # Errors
-    /// * [`ReadWriteAdapter::ReadAdapterError`] or [`ReadWriteAdapter::WriteAdapterError`] - The underlying reader or writer failed.
-    /// * [`ReadWriteAdapterError::HandshakeError`] - There was a problem during the handshake (eg. the provided buffer is too small).
+    /// * [`ReadWriteAdapterError::ReadAdapter`] or [`ReadWriteAdapterError::WriteAdapter`] - The underlying reader or writer failed.
+    /// * [`ReadWriteAdapterError::Handshake`] - There was a problem during the handshake (eg. the provided buffer is too small).
     pub fn try_new<HS: Handshaker<C, H>, R: Read>(
         hs: HS,
         mut reader: R,
