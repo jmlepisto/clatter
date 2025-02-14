@@ -268,33 +268,44 @@ mod tests {
         }
     }
 
-    #[test]
-    fn simple_test() {
+    fn test_adapter<const ADAPTER_BUFFER_SIZE: usize>() {
         let alice_comm_buf = WrapCircularBuffer::<1000>::new();
         let bob_comm_buf = WrapCircularBuffer::<1000>::new();
 
         let (alice_transport, bob_transport) = handshake::<X25519, ChaChaPoly, Sha512>(noise_nn());
 
-        let mut alice_io_adapter = IoAdapter::<_, _, _, _, 18>::new_with_transport_state(
-            alice_transport,
-            alice_comm_buf.clone(),
-            bob_comm_buf.clone(),
-        );
+        let mut alice_io_adapter =
+            IoAdapter::<_, _, _, _, ADAPTER_BUFFER_SIZE>::new_with_transport_state(
+                alice_transport,
+                alice_comm_buf.clone(),
+                bob_comm_buf.clone(),
+            );
 
-        let mut bob_io_adapter = IoAdapter::<_, _, _, _, 18>::new_with_transport_state(
-            bob_transport,
-            bob_comm_buf.clone(),
-            alice_comm_buf.clone(),
-        );
+        let mut bob_io_adapter =
+            IoAdapter::<_, _, _, _, ADAPTER_BUFFER_SIZE>::new_with_transport_state(
+                bob_transport,
+                bob_comm_buf.clone(),
+                alice_comm_buf.clone(),
+            );
 
         let mut test_buf = [0u8; 100];
         let data = b"But every knight has a horse";
-        // This will perform multiple writes due to small IoAdapter buffer
         alice_io_adapter.write_all(data).unwrap();
-        // This will perform multiple reads due to small IoAdapter buffer
         bob_io_adapter
             .read_exact(&mut test_buf[..data.len()])
             .unwrap();
         assert_eq!(&test_buf[..data.len()], data);
+    }
+
+    #[test]
+    fn io_adapter_test() {
+        // Basic test
+        test_adapter::<100>();
+
+        // Small (but sufficient) adapter buffer
+        test_adapter::<20>();
+
+        // Too small adapter buffer: does not compile
+        // test_adapter::<16>();
     }
 }
