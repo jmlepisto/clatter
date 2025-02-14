@@ -95,7 +95,6 @@ pub struct IoAdapter<C: Cipher, H: Hash, R: Read, W: Write, const BUF: usize> {
     inner_write: WriteAdapterInner<W, BUF>,
 }
 
-// TODO: Typestate every message pattern, this would allow easier read
 // TODO: Implement Async{Read,Write) from embedded-io-async
 impl<C: Cipher, H: Hash, R: Read, W: Write, const BUF: usize> IoAdapter<C, H, R, W, BUF> {
     /// Try to construct a new read and write adapter by performing a handshake.
@@ -175,11 +174,6 @@ impl<C: Cipher, H: Hash, R: Read, W: Write, const BUF: usize> Write for IoAdapte
             .map_err(ReadWriteAdapterError::WriteAdapter)
     }
 }
-
-// TODO: Test combination of:
-// TODO: * small capacity channel with bufread
-// TODO: * big buf to read or write
-// TODO: * small io_buffer
 
 #[cfg(test)]
 mod tests {
