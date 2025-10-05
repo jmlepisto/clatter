@@ -1,5 +1,6 @@
-#![cfg(feature = "getrandom")]
 //! Basic smoke tests - not full coverage on all crypto primitive combinations but good enough
+
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use clatter::bytearray::ByteArray;
 use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
@@ -8,12 +9,42 @@ use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
 use clatter::crypto::kem::{pqclean_kyber, rust_crypto_ml_kem};
 use clatter::handshakepattern::*;
 use clatter::traits::{Cipher, Dh, Hash, Kem};
-use clatter::{DualLayerHandshake, Handshaker, NqHandshake, PqHandshake};
+use clatter::{DualLayerHandshake, Handshaker, NqHandshakeCore, PqHandshakeCore};
 
 const PSKS: &[[u8; 32]] = &[[0; 32], [1; 32], [2; 32], [3; 32]];
 
+static RNG_CTR: AtomicU64 = AtomicU64::new(0xdeadbeef);
+
+/// Deterministic custom RNG for testing purposes
+#[derive(Default)]
+struct DummyRng;
+
+impl rand_core::RngCore for DummyRng {
+    fn next_u32(&mut self) -> u32 {
+        RNG_CTR.fetch_add(1, Ordering::Relaxed) as u32
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        RNG_CTR.fetch_add(1, Ordering::Relaxed)
+    }
+
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        for byte in dest {
+            *byte = (RNG_CTR.fetch_add(1, Ordering::Relaxed) % 256) as u8;
+        }
+    }
+
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
+        self.fill_bytes(dest);
+        Ok(())
+    }
+}
+
+// Marker trait
+impl rand_core::CryptoRng for DummyRng {}
+
 #[test]
-fn smoke_nq_handshakes() {
+fn no_getrandom_smoke_nq_handshakes() {
     let handshakes = [
         noise_n(),
         noise_k(),
@@ -54,20 +85,20 @@ fn smoke_nq_handshakes() {
     ];
 
     for pattern in handshakes {
-        nq_handshake::<X25519, ChaChaPoly, Sha512>(pattern.clone());
-        nq_handshake::<X25519, ChaChaPoly, Sha256>(pattern.clone());
-        nq_handshake::<X25519, ChaChaPoly, Blake2b>(pattern.clone());
-        nq_handshake::<X25519, ChaChaPoly, Blake2s>(pattern.clone());
+        no_getrandom_nq_handshake::<X25519, ChaChaPoly, Sha512>(pattern.clone());
+        no_getrandom_nq_handshake::<X25519, ChaChaPoly, Sha256>(pattern.clone());
+        no_getrandom_nq_handshake::<X25519, ChaChaPoly, Blake2b>(pattern.clone());
+        no_getrandom_nq_handshake::<X25519, ChaChaPoly, Blake2s>(pattern.clone());
 
-        nq_handshake::<X25519, AesGcm, Sha512>(pattern.clone());
-        nq_handshake::<X25519, AesGcm, Sha256>(pattern.clone());
-        nq_handshake::<X25519, AesGcm, Blake2b>(pattern.clone());
-        nq_handshake::<X25519, AesGcm, Blake2s>(pattern.clone());
+        no_getrandom_nq_handshake::<X25519, AesGcm, Sha512>(pattern.clone());
+        no_getrandom_nq_handshake::<X25519, AesGcm, Sha256>(pattern.clone());
+        no_getrandom_nq_handshake::<X25519, AesGcm, Blake2b>(pattern.clone());
+        no_getrandom_nq_handshake::<X25519, AesGcm, Blake2s>(pattern.clone());
     }
 }
 
 #[test]
-fn smoke_pq_handshakes() {
+fn no_getrandom_smoke_pq_handshakes() {
     let handshakes = [
         noise_pqik(),
         noise_pqin(),
@@ -102,15 +133,15 @@ fn smoke_pq_handshakes() {
     ];
 
     fn cipher_hash_combos<EKEM: Kem, SKEM: Kem>(pattern: HandshakePattern) {
-        pq_handshake::<EKEM, SKEM, ChaChaPoly, Blake2b>(pattern.clone());
-        pq_handshake::<EKEM, SKEM, ChaChaPoly, Blake2s>(pattern.clone());
-        pq_handshake::<EKEM, SKEM, ChaChaPoly, Sha256>(pattern.clone());
-        pq_handshake::<EKEM, SKEM, ChaChaPoly, Sha512>(pattern.clone());
+        no_getrandom_pq_handshake::<EKEM, SKEM, ChaChaPoly, Blake2b>(pattern.clone());
+        no_getrandom_pq_handshake::<EKEM, SKEM, ChaChaPoly, Blake2s>(pattern.clone());
+        no_getrandom_pq_handshake::<EKEM, SKEM, ChaChaPoly, Sha256>(pattern.clone());
+        no_getrandom_pq_handshake::<EKEM, SKEM, ChaChaPoly, Sha512>(pattern.clone());
 
-        pq_handshake::<EKEM, SKEM, AesGcm, Blake2b>(pattern.clone());
-        pq_handshake::<EKEM, SKEM, AesGcm, Blake2s>(pattern.clone());
-        pq_handshake::<EKEM, SKEM, AesGcm, Sha256>(pattern.clone());
-        pq_handshake::<EKEM, SKEM, AesGcm, Sha512>(pattern.clone());
+        no_getrandom_pq_handshake::<EKEM, SKEM, AesGcm, Blake2b>(pattern.clone());
+        no_getrandom_pq_handshake::<EKEM, SKEM, AesGcm, Blake2s>(pattern.clone());
+        no_getrandom_pq_handshake::<EKEM, SKEM, AesGcm, Sha256>(pattern.clone());
+        no_getrandom_pq_handshake::<EKEM, SKEM, AesGcm, Sha512>(pattern.clone());
     }
 
     for pattern in handshakes {
@@ -138,7 +169,7 @@ fn smoke_pq_handshakes() {
 }
 
 #[test]
-fn smoke_dual_layer_handshakes() {
+fn no_getrandom_smoke_dual_layer_handshakes() {
     let nq_handshakes = [
         noise_n(),
         noise_k(),
@@ -215,36 +246,36 @@ fn smoke_dual_layer_handshakes() {
         nq_pattern: HandshakePattern,
         pq_pattern: HandshakePattern,
     ) {
-        dual_layer_handshake::<EKEM, SKEM, DH, ChaChaPoly, Blake2b>(
+        no_getrandom_dual_layer_handshake::<EKEM, SKEM, DH, ChaChaPoly, Blake2b>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
-        dual_layer_handshake::<EKEM, SKEM, DH, ChaChaPoly, Blake2s>(
+        no_getrandom_dual_layer_handshake::<EKEM, SKEM, DH, ChaChaPoly, Blake2s>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
-        dual_layer_handshake::<EKEM, SKEM, DH, ChaChaPoly, Sha256>(
+        no_getrandom_dual_layer_handshake::<EKEM, SKEM, DH, ChaChaPoly, Sha256>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
-        dual_layer_handshake::<EKEM, SKEM, DH, ChaChaPoly, Sha512>(
+        no_getrandom_dual_layer_handshake::<EKEM, SKEM, DH, ChaChaPoly, Sha512>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
 
-        dual_layer_handshake::<EKEM, SKEM, DH, AesGcm, Blake2b>(
+        no_getrandom_dual_layer_handshake::<EKEM, SKEM, DH, AesGcm, Blake2b>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
-        dual_layer_handshake::<EKEM, SKEM, DH, AesGcm, Blake2s>(
+        no_getrandom_dual_layer_handshake::<EKEM, SKEM, DH, AesGcm, Blake2s>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
-        dual_layer_handshake::<EKEM, SKEM, DH, AesGcm, Sha256>(
+        no_getrandom_dual_layer_handshake::<EKEM, SKEM, DH, AesGcm, Sha256>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
-        dual_layer_handshake::<EKEM, SKEM, DH, AesGcm, Sha512>(
+        no_getrandom_dual_layer_handshake::<EKEM, SKEM, DH, AesGcm, Sha512>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
@@ -293,19 +324,19 @@ fn smoke_dual_layer_handshakes() {
     }
 }
 
-fn dual_layer_handshake<EKEM: Kem, SKEM: Kem, DH: Dh, C: Cipher, H: Hash>(
+fn no_getrandom_dual_layer_handshake<EKEM: Kem, SKEM: Kem, DH: Dh, C: Cipher, H: Hash>(
     nq_pattern: HandshakePattern,
     pq_pattern: HandshakePattern,
 ) {
     // -- Prepare NQ handshake --
 
     // Generate static keys
-    let alice_s = DH::genkey().unwrap();
+    let alice_s = DH::genkey_rng(&mut DummyRng).unwrap();
     let alice_s_pub = alice_s.public.clone();
-    let bob_s = DH::genkey().unwrap();
+    let bob_s = DH::genkey_rng(&mut DummyRng).unwrap();
     let bob_s_pub = bob_s.public.clone();
 
-    let mut alice_nq = NqHandshake::<DH, C, H>::new(
+    let mut alice_nq = NqHandshakeCore::<DH, C, H, DummyRng>::new(
         nq_pattern.clone(),
         b"Spinning round and round",
         true,
@@ -316,7 +347,7 @@ fn dual_layer_handshake<EKEM: Kem, SKEM: Kem, DH: Dh, C: Cipher, H: Hash>(
     )
     .unwrap();
 
-    let mut bob_nq = NqHandshake::<DH, C, H>::new(
+    let mut bob_nq = NqHandshakeCore::<DH, C, H, DummyRng>::new(
         nq_pattern,
         b"Spinning round and round",
         false,
@@ -336,12 +367,12 @@ fn dual_layer_handshake<EKEM: Kem, SKEM: Kem, DH: Dh, C: Cipher, H: Hash>(
     // -- Prepare PQ handshake --
 
     // Generate static keys
-    let alice_keys = SKEM::genkey().unwrap();
+    let alice_keys = SKEM::genkey_rng(&mut DummyRng).unwrap();
     let alice_pub = alice_keys.public.clone();
-    let bob_keys = SKEM::genkey().unwrap();
+    let bob_keys = SKEM::genkey_rng(&mut DummyRng).unwrap();
     let bob_pub = bob_keys.public.clone();
 
-    let mut alice_pq = PqHandshake::<EKEM, SKEM, C, H>::new(
+    let mut alice_pq = PqHandshakeCore::<EKEM, SKEM, C, H, DummyRng>::new(
         pq_pattern.clone(),
         b"Stumbling all around",
         true,
@@ -352,7 +383,7 @@ fn dual_layer_handshake<EKEM: Kem, SKEM: Kem, DH: Dh, C: Cipher, H: Hash>(
     )
     .unwrap();
 
-    let mut bob_pq = PqHandshake::<EKEM, SKEM, C, H>::new(
+    let mut bob_pq = PqHandshakeCore::<EKEM, SKEM, C, H, DummyRng>::new(
         pq_pattern,
         b"Stumbling all around",
         false,
@@ -419,14 +450,14 @@ fn dual_layer_handshake<EKEM: Kem, SKEM: Kem, DH: Dh, C: Cipher, H: Hash>(
     );
 }
 
-fn nq_handshake<DH: Dh, C: Cipher, H: Hash>(pattern: HandshakePattern) {
+fn no_getrandom_nq_handshake<DH: Dh, C: Cipher, H: Hash>(pattern: HandshakePattern) {
     // Generate static keys
-    let alice_s = DH::genkey().unwrap();
+    let alice_s = DH::genkey_rng(&mut DummyRng).unwrap();
     let alice_s_pub = alice_s.public.clone();
-    let bob_s = DH::genkey().unwrap();
+    let bob_s = DH::genkey_rng(&mut DummyRng).unwrap();
     let bob_s_pub = bob_s.public.clone();
 
-    let mut alice = NqHandshake::<DH, C, H>::new(
+    let mut alice = NqHandshakeCore::<DH, C, H, DummyRng>::new(
         pattern.clone(),
         b"Spinning round and round",
         true,
@@ -437,7 +468,7 @@ fn nq_handshake<DH: Dh, C: Cipher, H: Hash>(pattern: HandshakePattern) {
     )
     .unwrap();
 
-    let mut bob = NqHandshake::<DH, C, H>::new(
+    let mut bob = NqHandshakeCore::<DH, C, H, DummyRng>::new(
         pattern,
         b"Spinning round and round",
         false,
@@ -500,14 +531,14 @@ fn nq_handshake<DH: Dh, C: Cipher, H: Hash>(pattern: HandshakePattern) {
     );
 }
 
-fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePattern) {
+fn no_getrandom_pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePattern) {
     // Generate static keys
-    let alice_keys = SKEM::genkey().unwrap();
+    let alice_keys = SKEM::genkey_rng(&mut DummyRng).unwrap();
     let alice_pub = alice_keys.public.clone();
-    let bob_keys = SKEM::genkey().unwrap();
+    let bob_keys = SKEM::genkey_rng(&mut DummyRng).unwrap();
     let bob_pub = bob_keys.public.clone();
 
-    let mut alice = PqHandshake::<EKEM, SKEM, C, H>::new(
+    let mut alice = PqHandshakeCore::<EKEM, SKEM, C, H, DummyRng>::new(
         pattern.clone(),
         b"Stumbling all around",
         true,
@@ -518,7 +549,7 @@ fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePatt
     )
     .unwrap();
 
-    let mut bob = PqHandshake::<EKEM, SKEM, C, H>::new(
+    let mut bob = PqHandshakeCore::<EKEM, SKEM, C, H, DummyRng>::new(
         pattern,
         b"Stumbling all around",
         false,

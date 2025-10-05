@@ -11,14 +11,11 @@ use clatter::NqHandshake;
 const PSK: &[u8] = b"Trapped inside this Octavarium!!";
 
 fn main() {
-    let mut rng_alice = rand::thread_rng();
-    let mut rng_bob = rand::thread_rng();
-
     // Generate keys
-    let alice_s = X25519::genkey(&mut rng_alice).unwrap();
-    let bob_s = X25519::genkey(&mut rng_bob).unwrap();
+    let alice_s = X25519::genkey().unwrap();
+    let bob_s = X25519::genkey().unwrap();
 
-    let mut alice = NqHandshake::<X25519, ChaChaPoly, Sha512, _>::new(
+    let mut alice = NqHandshake::<X25519, ChaChaPoly, Sha512>::new(
         noise_xx_psk3(),
         &[],
         true,
@@ -26,11 +23,10 @@ fn main() {
         None,
         None,
         None,
-        &mut rng_alice,
     )
     .unwrap();
 
-    let mut bob = NqHandshake::<X25519, ChaChaPoly, Sha512, _>::new(
+    let mut bob = NqHandshake::<X25519, ChaChaPoly, Sha512>::new(
         noise_xx_psk3(),
         &[],
         false,
@@ -38,7 +34,6 @@ fn main() {
         None,
         None,
         None,
-        &mut rng_bob,
     )
     .unwrap();
 

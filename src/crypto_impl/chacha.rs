@@ -33,7 +33,7 @@ impl Cipher for ChaChaPoly {
     ) -> usize {
         assert!(plaintext_len
             .checked_add(Self::tag_len())
-            .map_or(false, |len| len <= in_out.len()));
+            .is_some_and(|len| len <= in_out.len()));
 
         let mut full_nonce = [0u8; 12];
         full_nonce[4..].copy_from_slice(&nonce.to_le_bytes());

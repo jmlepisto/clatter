@@ -64,16 +64,13 @@ fn verify_with<DH: Dh, C: Cipher, H: Hash>(data: &[u8]) {
     const PSK: &[u8] = b"Trapped inside this Octavarium!!";
 
     for pattern in handshakes {
-        let mut alice_rng = rand::thread_rng();
-        let mut bob_rng = rand::thread_rng();
-
         let mut alice_buf = [0u8; MAX_MESSAGE_LEN];
 
-        let alice_key = DH::genkey(&mut alice_rng).unwrap();
-        let bob_key = DH::genkey(&mut bob_rng).unwrap();
+        let alice_key = DH::genkey().unwrap();
+        let bob_key = DH::genkey().unwrap();
         let bob_pub = bob_key.public.clone();
 
-        let mut alice = NqHandshake::<DH, C, H, _>::new(
+        let mut alice = NqHandshake::<DH, C, H>::new(
             pattern.clone(),
             &[],
             true,
@@ -81,7 +78,6 @@ fn verify_with<DH: Dh, C: Cipher, H: Hash>(data: &[u8]) {
             None,
             Some(bob_pub),
             None,
-            &mut alice_rng,
         )
         .unwrap();
 

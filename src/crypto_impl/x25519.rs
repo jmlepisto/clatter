@@ -1,7 +1,7 @@
 use x25519_dalek::{PublicKey, StaticSecret};
 
 use crate::bytearray::{ByteArray, SensitiveByteArray};
-use crate::traits::{CryptoComponent, Dh};
+use crate::traits::{CryptoComponent, Dh, Rng};
 use crate::KeyPair;
 
 /// X25519 DH implementation
@@ -18,7 +18,7 @@ impl Dh for X25519 {
     type PubKey = [u8; 32];
     type Output = SensitiveByteArray<[u8; 32]>;
 
-    fn genkey<R: rand_core::RngCore + rand_core::CryptoRng>(
+    fn genkey_rng<R: Rng>(
         rng: &mut R,
     ) -> crate::error::DhResult<KeyPair<Self::PubKey, Self::PrivateKey>> {
         let s = StaticSecret::random_from_rng(rng);

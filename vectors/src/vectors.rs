@@ -196,9 +196,8 @@ where
     let alice_psks: &[Hex] = v.init_psks.as_ref().map_or(&[], |p| &p);
     let bob_psks: &[Hex] = v.resp_psks.as_ref().map_or(&[], |p| &p);
 
-    let mut alice_rng = rand::thread_rng();
     let mut alice = Some(
-        NqHandshake::<DH, CIPHER, HASH, _>::new(
+        NqHandshake::<DH, CIPHER, HASH>::new(
             pattern.clone(),
             alice_prologue,
             true,
@@ -206,14 +205,12 @@ where
             alice_ephemeral,
             alice_remote_static,
             None,
-            &mut alice_rng,
         )
         .unwrap(),
     );
 
-    let mut bob_rng = rand::thread_rng();
     let mut bob = Some(
-        NqHandshake::<DH, CIPHER, HASH, _>::new(
+        NqHandshake::<DH, CIPHER, HASH>::new(
             pattern.clone(),
             bob_prologue,
             false,
@@ -221,7 +218,6 @@ where
             bob_ephemeral,
             bob_remote_static,
             None,
-            &mut bob_rng,
         )
         .unwrap(),
     );

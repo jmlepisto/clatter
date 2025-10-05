@@ -22,3 +22,7 @@ pub mod chacha;
 // DHs
 #[cfg(feature = "use-25519")]
 pub mod x25519;
+
+// RNGs
+#[cfg(feature = "getrandom")]
+pub mod random;

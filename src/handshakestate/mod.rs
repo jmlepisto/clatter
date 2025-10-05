@@ -27,7 +27,7 @@ pub enum HandshakeStatus {
     Error,
 }
 
-pub(crate) struct HandshakeInternals<'a, C, H, RNG, K, P, EK, EP>
+pub(crate) struct HandshakeInternals<C, H, RNG, K, P, EK, EP>
 where
     C: Cipher,
     H: Hash,
@@ -48,10 +48,10 @@ where
     initiator_pattern_index: usize,
     responder_pattern_index: usize,
     psks: ArrayVec<[u8; PSK_LEN], MAX_PSKS>,
-    rng: &'a mut RNG,
+    rng: RNG,
 }
 
-impl<'a, C, H, RNG, K, P, EK, EP> HandshakeInternals<'a, C, H, RNG, K, P, EK, EP>
+impl<C, H, RNG, K, P, EK, EP> HandshakeInternals<C, H, RNG, K, P, EK, EP>
 where
     C: Cipher,
     H: Hash,
