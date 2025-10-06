@@ -11,9 +11,30 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  test:
+    name: Run tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: Run tests
       run: ./test.sh
+
+  fuzz:
+    name: Run (quick) fuzzing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run fuzzing
+        run: ./fuzz-all.sh 60
+
+  msrv:
+    name: Verify MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cargo-msrv
+        run: cargo install cargo-msrv
+
+      - name: Verify Minimum Supported Rust Version
+        run: cargo msrv verify
