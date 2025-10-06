@@ -26,6 +26,7 @@ exclude = [
     "vectors/*",
     ".github/*",
     "tests/*",
+    "fuzz/*",
 ]
 
 [features]
@@ -36,7 +37,7 @@ default = [
     "use-sha", 
     "use-blake2",
     "use-25519", 
-    "use-pqclean-kyber",
+    "use-pqclean-ml-kem",
     "use-rust-crypto-ml-kem", 
 ]
 
@@ -58,7 +59,7 @@ use-sha = ["sha2"]
 use-blake2 = ["blake2"]
 use-aes-gcm = ["aes-gcm"]
 use-chacha20poly1305 = ["chacha20poly1305"]
-use-pqclean-kyber = ["pqcrypto-kyber", "pqcrypto-traits"]
+use-pqclean-ml-kem = ["pqcrypto-mlkem", "pqcrypto-traits"]
 use-rust-crypto-ml-kem = ["ml-kem"]
 use-25519 = ["x25519-dalek"]
 
@@ -82,7 +83,7 @@ ml-kem = { version = "0.2.1", default-features = false, features = ["zeroize"], 
 sha2 = { version = "0.10.9", default-features = false, optional = true }
 thiserror-no-std = { version = "2.0.2", default-features = false }
 x25519-dalek = { version = "2.0.1", default-features = false, features = ["static_secrets", "zeroize"], optional = true }
-pqcrypto-kyber = { version = "0.8.1", default-features = false, optional = true }
+pqcrypto-mlkem = { version = "0.1.1", default-features = false, optional = true }
 pqcrypto-traits = { version = "0.3.5", default-features = false, optional = true }
 displaydoc = { version = "0.2.5", default-features = false }
 getrandom = { version = "0.3.3", optional = true }
@@ -91,4 +92,7 @@ getrandom = { version = "0.3.3", optional = true }
 rand = "0.8.5"
 
 [workspace]
-members = ["fuzz", "vectors"]
+members = [
+    "fuzz",
+    "vectors",
+]

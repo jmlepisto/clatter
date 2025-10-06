@@ -134,7 +134,7 @@ dependencies = [
  "displaydoc",
  "getrandom 0.3.3",
  "ml-kem",
- "pqcrypto-kyber",
+ "pqcrypto-mlkem",
  "pqcrypto-traits",
  "rand",
  "rand_core",
@@ -445,10 +445,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "pqcrypto-kyber"
-version = "0.8.1"
+name = "pqcrypto-mlkem"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15c00293cf898859d0c771455388054fd69ab712263c73fdc7f287a39b1ba000"
+checksum = "eb14d207f3749e8a59a026c22ceaa72d70fff931cfbf4c8d9b08f3fc56dc6e60"
 dependencies = [
  "cc",
  "glob",

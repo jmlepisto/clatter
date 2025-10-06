@@ -4,7 +4,7 @@ use clatter::bytearray::ByteArray;
 use clatter::constants::MAX_MESSAGE_LEN;
 use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
 use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
-use clatter::crypto::kem::pqclean_kyber::Kyber768;
+use clatter::crypto::kem::pqclean_ml_kem::MlKem1024;
 use clatter::crypto::kem::rust_crypto_ml_kem::MlKem512;
 use clatter::handshakepattern::*;
 use clatter::traits::{Cipher, Hash, Kem};
@@ -13,14 +13,14 @@ use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {
     // TODO: generate all combinations
-    verify_with::<Kyber768, MlKem512, AesGcm, Sha256>(data);
-    verify_with::<Kyber768, MlKem512, AesGcm, Sha512>(data);
-    verify_with::<Kyber768, MlKem512, AesGcm, Blake2b>(data);
-    verify_with::<Kyber768, MlKem512, AesGcm, Blake2s>(data);
-    verify_with::<Kyber768, MlKem512, ChaChaPoly, Sha256>(data);
-    verify_with::<Kyber768, MlKem512, ChaChaPoly, Sha512>(data);
-    verify_with::<Kyber768, MlKem512, ChaChaPoly, Blake2b>(data);
-    verify_with::<Kyber768, MlKem512, ChaChaPoly, Blake2b>(data);
+    verify_with::<MlKem1024, MlKem512, AesGcm, Sha256>(data);
+    verify_with::<MlKem1024, MlKem512, AesGcm, Sha512>(data);
+    verify_with::<MlKem1024, MlKem512, AesGcm, Blake2b>(data);
+    verify_with::<MlKem1024, MlKem512, AesGcm, Blake2s>(data);
+    verify_with::<MlKem1024, MlKem512, ChaChaPoly, Sha256>(data);
+    verify_with::<MlKem1024, MlKem512, ChaChaPoly, Sha512>(data);
+    verify_with::<MlKem1024, MlKem512, ChaChaPoly, Blake2b>(data);
+    verify_with::<MlKem1024, MlKem512, ChaChaPoly, Blake2b>(data);
 });
 
 fn verify_with<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(data: &[u8]) {

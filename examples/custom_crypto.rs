@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 use clatter::bytearray::{ByteArray, SensitiveByteArray};
 use clatter::crypto::cipher::ChaChaPoly;
-use clatter::crypto::kem::pqclean_kyber::Kyber768;
+use clatter::crypto::kem::pqclean_ml_kem::MlKem1024;
 // We can mix and match KEMs from different vendors
 use clatter::crypto::kem::rust_crypto_ml_kem::MlKem512;
 use clatter::handshakepattern::noise_pqnn;
@@ -58,7 +58,7 @@ impl clatter::traits::Hash for MySillyHash {
 }
 
 fn main() {
-    let mut alice = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, MySillyHash>::new(
+    let mut alice = PqHandshake::<MlKem512, MlKem1024, ChaChaPoly, MySillyHash>::new(
         noise_pqnn(),
         &[],
         true,
@@ -69,7 +69,7 @@ fn main() {
     )
     .unwrap();
 
-    let mut bob = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, MySillyHash>::new(
+    let mut bob = PqHandshake::<MlKem512, MlKem1024, ChaChaPoly, MySillyHash>::new(
         noise_pqnn(),
         &[],
         false,
