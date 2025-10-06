@@ -56,7 +56,7 @@
 //! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing                    | yes       |                                                                   |
 //! | `use-blake2`              | Enable BLAKE2 hashing                                 | yes       |                                                                   |
 //! | `use-rust-crypto-ml-kem`  | Enable ML-KEM (Kyber) KEMs by RustCrypto              | yes       |                                                                   |
-//! | `use-pqclean-kyber`       | Enable Kyber KEMs by PQClean                          | yes       |                                                                   |
+//! | `use-pqclean-ml-kem`      | Enable ML-KEM (Kyber) KEMs by PQClean                 | yes       |                                                                   |
 //! | `std`                     | Enable standard library support                       | yes       | Enables `std` for supported dependencies                          |
 //! | `alloc`                   | Enable allocator support                              | yes       | Enables dynamically sized buffer types in [`crate::bytearray`]    |
 //! | `getrandom`               | Enable automatic system RNG support via [`getrandom`] | yes       | Can be used without `std`                                         |
@@ -69,7 +69,7 @@
 //! ```rust
 //! use clatter::crypto::cipher::ChaChaPoly;
 //! use clatter::crypto::hash::Sha512;
-//! use clatter::crypto::kem::pqclean_kyber::Kyber768;
+//! use clatter::crypto::kem::pqclean_ml_kem::MlKem1024;
 //! // We can mix and match KEMs from different vendors
 //! use clatter::crypto::kem::rust_crypto_ml_kem::MlKem512;
 //! use clatter::handshakepattern::noise_pqnn;
@@ -77,7 +77,7 @@
 //! use clatter::PqHandshake;
 //!
 //!
-//! let mut alice = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, Sha512>::new(
+//! let mut alice = PqHandshake::<MlKem512, MlKem1024, ChaChaPoly, Sha512>::new(
 //!     noise_pqnn(),
 //!     &[],
 //!     true,
@@ -88,7 +88,7 @@
 //! )
 //! .unwrap();
 //!
-//! let mut bob = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, Sha512>::new(
+//! let mut bob = PqHandshake::<MlKem512, MlKem1024, ChaChaPoly, Sha512>::new(
 //!     noise_pqnn(),
 //!     &[],
 //!     false,
@@ -132,7 +132,7 @@
 //! ```
 //!
 //! ## `no_std` targets
-//! 
+//!
 //! `std` feature is enabled by default. Disable default features and pick only the ones
 //! you require when running on `no_std` targets.
 //!
@@ -165,6 +165,7 @@ pub mod transportstate;
 pub use handshakestate::dual_layer::DualLayerHandshake;
 pub use handshakestate::nq::NqHandshakeCore;
 pub use handshakestate::pq::PqHandshakeCore;
+pub use rand_core;
 pub use traits::Handshaker;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 #[cfg(feature = "getrandom")]
@@ -175,9 +176,9 @@ pub mod crypto {
 
     /// Supported KEMs
     pub mod kem {
-        #[cfg_attr(docsrs, doc(cfg(feature = "use-pqclean-kyber")))]
-        #[cfg(feature = "use-pqclean-kyber")]
-        pub use crate::crypto_impl::pqclean_kyber;
+        #[cfg_attr(docsrs, doc(cfg(feature = "use-pqclean-ml-kem")))]
+        #[cfg(feature = "use-pqclean-ml-kem")]
+        pub use crate::crypto_impl::pqclean_ml_kem;
         #[cfg_attr(docsrs, doc(cfg(feature = "use-rust-crypto-ml-kem")))]
         #[cfg(feature = "use-rust-crypto-ml-kem")]
         pub use crate::crypto_impl::rust_crypto_ml_kem;

@@ -7,8 +7,8 @@ pub mod blake2;
 pub mod sha;
 
 // KEMs
-#[cfg(feature = "use-pqclean-kyber")]
-pub mod pqclean_kyber;
+#[cfg(feature = "use-pqclean-ml-kem")]
+pub mod pqclean_ml_kem;
 
 #[cfg(feature = "use-rust-crypto-ml-kem")]
 pub mod rust_crypto_ml_kem;
