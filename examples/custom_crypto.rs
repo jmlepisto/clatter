@@ -1,5 +1,3 @@
-use core::str;
-
 use arrayvec::ArrayVec;
 use clatter::bytearray::{ByteArray, SensitiveByteArray};
 use clatter::crypto::cipher::ChaChaPoly;
@@ -60,9 +58,7 @@ impl clatter::traits::Hash for MySillyHash {
 }
 
 fn main() {
-    let mut rng_alice = rand::thread_rng();
-    let mut rng_bob = rand::thread_rng();
-    let mut alice = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, MySillyHash, _>::new(
+    let mut alice = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, MySillyHash>::new(
         noise_pqnn(),
         &[],
         true,
@@ -70,11 +66,10 @@ fn main() {
         None,
         None,
         None,
-        &mut rng_alice,
     )
     .unwrap();
 
-    let mut bob = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, MySillyHash, _>::new(
+    let mut bob = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, MySillyHash>::new(
         noise_pqnn(),
         &[],
         false,
@@ -82,7 +77,6 @@ fn main() {
         None,
         None,
         None,
-        &mut rng_bob,
     )
     .unwrap();
 

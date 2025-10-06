@@ -60,18 +60,15 @@ fn verify_with<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(data: &[u8]) {
     const PSK: &[u8] = b"Trapped inside this Octavarium!!";
 
     for pattern in handshakes {
-        let mut alice_rng = rand::thread_rng();
-        let mut bob_rng = rand::thread_rng();
-
         let mut alice_buf = [0u8; MAX_MESSAGE_LEN];
         let mut bob_buf = [0u8; MAX_MESSAGE_LEN];
 
-        let alice_key = SKEM::genkey(&mut alice_rng).unwrap();
-        let bob_key = SKEM::genkey(&mut bob_rng).unwrap();
+        let alice_key = SKEM::genkey().unwrap();
+        let bob_key = SKEM::genkey().unwrap();
         let alice_pub = alice_key.public.clone();
         let bob_pub = bob_key.public.clone();
 
-        let mut alice = PqHandshake::<EKEM, SKEM, C, H, _>::new(
+        let mut alice = PqHandshake::<EKEM, SKEM, C, H>::new(
             pattern.clone(),
             &[],
             true,
@@ -79,10 +76,9 @@ fn verify_with<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(data: &[u8]) {
             None,
             Some(bob_pub),
             None,
-            &mut alice_rng,
         )
         .unwrap();
-        let mut bob = PqHandshake::<EKEM, SKEM, C, H, _>::new(
+        let mut bob = PqHandshake::<EKEM, SKEM, C, H>::new(
             pattern.clone(),
             &[],
             false,
@@ -90,7 +86,6 @@ fn verify_with<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(data: &[u8]) {
             None,
             Some(alice_pub),
             None,
-            &mut bob_rng,
         )
         .unwrap();
 

@@ -1,5 +1,3 @@
-use core::str;
-
 use clatter::crypto::cipher::ChaChaPoly;
 use clatter::crypto::hash::Sha512;
 use clatter::crypto::kem::pqclean_kyber::Kyber768;
@@ -10,9 +8,7 @@ use clatter::traits::Handshaker;
 use clatter::PqHandshake;
 
 fn main() {
-    let mut rng_alice = rand::thread_rng();
-    let mut rng_bob = rand::thread_rng();
-    let mut alice = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, Sha512, _>::new(
+    let mut alice = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, Sha512>::new(
         noise_pqnn(),
         &[],
         true,
@@ -20,11 +16,10 @@ fn main() {
         None,
         None,
         None,
-        &mut rng_alice,
     )
     .unwrap();
 
-    let mut bob = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, Sha512, _>::new(
+    let mut bob = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, Sha512>::new(
         noise_pqnn(),
         &[],
         false,
@@ -32,7 +27,6 @@ fn main() {
         None,
         None,
         None,
-        &mut rng_bob,
     )
     .unwrap();
 

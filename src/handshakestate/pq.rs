@@ -16,7 +16,12 @@ use crate::traits::{Cipher, Handshaker, HandshakerInternal, Hash, Kem, Rng};
 use crate::KeyPair;
 
 /// Post-quantum Noise handshake
-pub struct PqHandshake<'a, EKEM, SKEM, C, H, RNG>
+#[cfg(feature = "getrandom")]
+pub type PqHandshake<EKEM, SKEM, C, H> =
+    PqHandshakeCore<EKEM, SKEM, C, H, crate::crypto::rng::DefaultRng>;
+
+/// Post-quantum Noise handshake core with a generic RNG provider
+pub struct PqHandshakeCore<EKEM, SKEM, C, H, RNG>
 where
     EKEM: Kem,
     SKEM: Kem,
@@ -26,19 +31,11 @@ where
 {
     // Internal, we can live with this
     #[allow(clippy::type_complexity)]
-    internals: HandshakeInternals<
-        'a,
-        C,
-        H,
-        RNG,
-        SKEM::SecretKey,
-        SKEM::PubKey,
-        EKEM::SecretKey,
-        EKEM::PubKey,
-    >,
+    internals:
+        HandshakeInternals<C, H, RNG, SKEM::SecretKey, SKEM::PubKey, EKEM::SecretKey, EKEM::PubKey>,
 }
 
-impl<'a, EKEM, SKEM, CIPHER, HASH, RNG> PqHandshake<'a, EKEM, SKEM, CIPHER, HASH, RNG>
+impl<EKEM, SKEM, CIPHER, HASH, RNG> PqHandshakeCore<EKEM, SKEM, CIPHER, HASH, RNG>
 where
     EKEM: Kem,
     SKEM: Kem,
@@ -56,13 +53,13 @@ where
     /// * `e` - Our ephemeral keys - Shouldn't usually be provided manually
     /// * `rs` - Peer public static key
     /// * `re` - Peer public ephemeral key - Shouldn't usually be provided manually
-    /// * `rng` - RNG to use during the handshake
     ///
     /// # Generic parameters
     /// * `EKEM` - KEM algorithm to use for ephemeral key encapsulation
     /// * `SKEM` - KEM algorithm to use for static key encapsulation
     /// * `CIPHER` - Cipher algorithm to use
     /// * `HASH` - Hashing algorithm to use
+    /// * `RNG` - RNG to use
     ///
     /// # Panics
     /// * Panics if initialized with a NQ pattern
@@ -75,8 +72,7 @@ where
         e: Option<KeyPair<EKEM::PubKey, EKEM::SecretKey>>,
         rs: Option<SKEM::PubKey>,
         re: Option<EKEM::PubKey>,
-        rng: &'a mut RNG,
-    ) -> Result<PqHandshake<'a, EKEM, SKEM, CIPHER, HASH, RNG>, HandshakeError> {
+    ) -> Result<PqHandshakeCore<EKEM, SKEM, CIPHER, HASH, RNG>, HandshakeError> {
         // Can't KEM without KEM, right
         assert!(pattern.is_kem());
 
@@ -171,10 +167,10 @@ where
             initiator,
             pattern,
             status,
-            rng,
             initiator_pattern_index: 0,
             responder_pattern_index: 0,
             psks: ArrayVec::<[u8; PSK_LEN], MAX_PSKS>::new(),
+            rng: RNG::default(),
         };
 
         let this = Self { internals };
@@ -183,7 +179,7 @@ where
     }
 }
 
-impl<'a, EKEM, SKEM, C, H, RNG> HandshakerInternal<C, H> for PqHandshake<'a, EKEM, SKEM, C, H, RNG>
+impl<EKEM, SKEM, C, H, RNG> HandshakerInternal<C, H> for PqHandshakeCore<EKEM, SKEM, C, H, RNG>
 where
     EKEM: Kem,
     SKEM: Kem,
@@ -223,7 +219,7 @@ where
             match *token {
                 Token::E => {
                     if self.internals.e.is_none() {
-                        self.internals.e = Some(EKEM::genkey(&mut self.internals.rng)?);
+                        self.internals.e = Some(EKEM::genkey_rng(&mut self.internals.rng)?);
                     }
 
                     let e_pub = &self.internals.e.as_ref().unwrap().public;
@@ -427,7 +423,7 @@ where
     }
 }
 
-impl<'a, EKEM, SKEM, C, H, RNG> Handshaker<C, H> for PqHandshake<'a, EKEM, SKEM, C, H, RNG>
+impl<EKEM, SKEM, C, H, RNG> Handshaker<C, H> for PqHandshakeCore<EKEM, SKEM, C, H, RNG>
 where
     EKEM: Kem,
     SKEM: Kem,

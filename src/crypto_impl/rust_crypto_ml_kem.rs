@@ -6,7 +6,7 @@ use zeroize::Zeroize;
 
 use crate::bytearray::{ByteArray, SensitiveByteArray};
 use crate::error::KemError;
-use crate::traits::{CryptoComponent, Kem};
+use crate::traits::{CryptoComponent, Kem, Rng};
 use crate::KeyPair;
 
 /// ML-KEM-512 KEM implementation
@@ -54,7 +54,7 @@ macro_rules! impl_ml_kem {
 
             type Ss = SensitiveByteArray<[u8; 32]>;
 
-            fn genkey<R: rand_core::RngCore + rand_core::CryptoRng>(
+            fn genkey_rng<R: Rng>(
                 rng: &mut R,
             ) -> crate::error::KemResult<crate::KeyPair<Self::PubKey, Self::SecretKey>> {
                 let (dk, ek) = ml_kem::kem::Kem::<$params>::generate(rng);
@@ -64,7 +64,7 @@ macro_rules! impl_ml_kem {
                 })
             }
 
-            fn encapsulate<R: rand_core::RngCore + rand_core::CryptoRng>(
+            fn encapsulate<R: Rng>(
                 pk: &[u8],
                 rng: &mut R,
             ) -> crate::error::KemResult<(Self::Ct, Self::Ss)> {

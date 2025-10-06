@@ -1,6 +1,6 @@
 [package]
 name = "clatter"
-version = "1.1.0"
+version = "2.0.0-rc.1"
 edition = "2021"
 license = "MIT"
 description = "no_std compatible implementation of Noise protocol framework with Post-Quantum extensions"
@@ -30,6 +30,7 @@ exclude = [
 
 [features]
 default = [
+    "std",
     "use-aes-gcm", 
     "use-chacha20poly1305", 
     "use-sha", 
@@ -48,7 +49,10 @@ std = [
     "chacha20poly1305/std",
     "ml-kem/std",
     "zeroize/std",
+    "getrandom",
 ]
+
+getrandom = ["dep:getrandom"]
 
 use-sha = ["sha2"]
 use-blake2 = ["blake2"]
@@ -67,7 +71,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [dependencies]
 # Mandatory
 arrayvec = { version = "0.7.6", default-features = false, features = ["zeroize"] }
-rand_core = "0.6.4"
+rand_core = "^0.6"
 zeroize = { version = "1.8.1", default-features = false, features = ["zeroize_derive"] }
 
 # Optional
@@ -75,12 +79,13 @@ aes-gcm = { version = "0.10.3", default-features = false, features = ["aes"], op
 blake2 = { version = "0.10.6", default-features = false, optional = true }
 chacha20poly1305 = { version = "0.10.1", default-features = false, features = ["rand_core"], optional = true }
 ml-kem = { version = "0.2.1", default-features = false, features = ["zeroize"], optional = true }
-sha2 = { version = "0.10.8", default-features = false, optional = true }
+sha2 = { version = "0.10.9", default-features = false, optional = true }
 thiserror-no-std = { version = "2.0.2", default-features = false }
 x25519-dalek = { version = "2.0.1", default-features = false, features = ["static_secrets", "zeroize"], optional = true }
 pqcrypto-kyber = { version = "0.8.1", default-features = false, optional = true }
 pqcrypto-traits = { version = "0.3.5", default-features = false, optional = true }
 displaydoc = { version = "0.2.5", default-features = false }
+getrandom = { version = "0.3.3", optional = true }
 
 [dev-dependencies]
 rand = "0.8.5"

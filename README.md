@@ -28,6 +28,11 @@ huge thanks to the developers for their effort!
 crypto primitives incorporated to provide additional security in case of a catastrophic flaw in the post-quantum algorithms.
 Clatter provides [`DualLayerHandshake`](https://docs.rs/clatter/latest/clatter/struct.DualLayerHandshake.html) for this purpose.
 
+📖 **Documentation** 📖
+
+* [`docs.rs`](https://docs.rs/clatter/latest/clatter/)
+* [`examples/`](examples/)
+
 ## Noise Protocol
 
 This crate tracks Noise protocol framework **revision 34**. As of now we omit support for the following features:
@@ -36,111 +41,6 @@ This crate tracks Noise protocol framework **revision 34**. As of now we omit su
 * Curve 448 DH support - No suitable Rust implementation exists for our requirements
 * Deferred pattern support - Can be implemented by the user
 * Fallback pattern support - Can be implemented by the user
-
-## Basics
-
-From user perspective, everything in this crate is built around three types:
-
-* [`NqHandshake`](https://docs.rs/clatter/latest/clatter/struct.NqHandshake.html) - Classical, non-post-quantum Noise handshake
-* [`PqHandshake`](https://docs.rs/clatter/latest/clatter/struct.PqHandshake.html) - Post-quantum Noise handshake
-* [`DualLayerHandshake`](https://docs.rs/clatter/latest/clatter/struct.DualLayerHandshake.html) - Dual layer handshake, which combines two Noise handshakes and allows a naive hybrid encryption approach
-
-Users will pick and instantiate the desired handshake state machine with the crypto primitives
-they wish to use (supplied as generic parameters) and complete the handshake using the methods 
-provided by the common `Handshaker` trait:
-
-* `write_message(...)` - Write next handshake message
-* `read_message(...)` - Read next handshake message
-* `is_finished()` - Is the handshake ready?
-* `finalize()` - Move to transport state
-
-Once the handshake is complete, the handshake state machine can be moved to transport state
-by calling `.finalize()`. This finishes the handshake and the returned `TransportState` can
-be used for encrypting and decrypting communication with the peer. Voilà!
-
-As already mentioned, this crate is quite verbose due to `no_std` compatibility requirements,
-so it's a good idea to take a look at the [examples](/examples) for a better view of the
-handshake process.
-
-### Example
-
-Simplified example with the most straightforward (and most unsecure) interactive PQ handshake 
-pattern and no handshake payload data at all:
-
-```rust
-use clatter::crypto::cipher::ChaChaPoly;
-use clatter::crypto::hash::Sha512;
-use clatter::crypto::kem::rust_crypto_ml_kem::MlKem512;
-use clatter::handshakepattern::noise_pqnn;
-use clatter::traits::Handshaker;
-use clatter::PqHandshake;
-
-fn main() {
-    let mut rng_alice = rand::thread_rng();
-
-    // Instantiate initiator handshake
-    let mut alice = PqHandshake::<MlKem512, MlKem512, ChaChaPoly, Sha512, _>::new(
-        noise_pqnn(),   // Handshake pattern
-        &[],            // Prologue data
-        true,           // Are we the initiator
-        None,           // Pre-shared keys..
-        None,           // ..
-        None,           // ..
-        None,           // ..
-        &mut rng_alice, // RNG instance
-    ).unwrap();
-
-    let mut buf_alice_send = [0u8; 4096];
-    let mut buf_alice_receive = [0u8; 4096];
-
-    // Send and receive handshake messages until the handshake is completed
-    loop {
-        if alice.is_write_turn() {
-            // Write handshake message to buf_alice_send
-            let n = alice.write_message(&[], &mut buf_alice_send).unwrap();
-            // --> Deliver buf_alice_send[..n] to peer
-            my_send_function(&buf_alice_send[..n]);
-        } else {
-            // <-- Receive message from peer to &buf_alice_receive
-            let n = my_receive_function(&mut buf_alice_receive);
-            // Process received handshake message
-            let _ = alice.read_message(&buf_alice_receive[..n], &mut[]).unwrap();
-        }
-
-        if alice.is_finished() {
-            break;
-        }
-    }
-
-    // Move to transport state
-    let mut alice = alice.finalize().unwrap();
-
-    // All done! Use .send() and .receive() on the transport state to encrypt
-    // and decrypt communication with the peer
-    let n = alice.send(b"Hello from Alice", &mut buf_alice_send).unwrap();
-    my_send_function(&buf_alice_send[..n]);   
-}
-```
-
-### Selectable Features
-
-Clatter allows user to pick the crypto primitives they wish to use via feature flags. Below is a table
-of all the configurable features supported by Clatter:
-
-| Feature flag              | Description                                               | Default   | Details                                       |
-| ---                       | ---                                                       | ---       | ---                                           |
-| `use-25519`               | Enable X25519 DH                                          | yes       |                                               |
-| `use-aes-gcm`             | Enable AES-GCM cipher                                     | yes       |                                               |
-| `use-chacha20poly1305`    | Enable ChaCha20-Poly1305 cipher                           | yes       |                                               |
-| `use-sha`                 | Enable SHA-256 and SHA-512 hashing                        | yes       |                                               |
-| `use-blake2`              | Enable BLAKE2 hashing                                     | yes       |                                               |
-| `use-rust-crypto-ml-kem`  | Enable ML-KEM (Kyber) KEMs by [RustCrypto][RustCrypto]    | yes       |                                               |
-| `use-pqclean-kyber`       | Enable Kyber KEMs by [PQClean][PQClean]                   | yes       |                                               |
-| `std`                     | Enable standard library support                           | no        | Enables `std` for supported dependencies      |
-| `alloc`                   | Enable allocator support                                  | no        |                                               |
-
-[RustCrypto]: https://github.com/RustCrypto/KEMs
-[PQClean]: https://github.com/rustpq/pqcrypto
 
 ## PQ? NQ? Why should I care?
 
@@ -222,9 +122,6 @@ Noise_pqNN_Kyber512+Kyber1024_ChaChaPoly_BLAKE2s
 Noise_pqNN_MLKEM512+Kyber768_ChaChaPoly_BLAKE2s
 ```
 
-
-
-
 ## Verification
 
 Caltter is verified by:
@@ -235,17 +132,6 @@ Caltter is verified by:
 * [Cacophony](https://github.com/haskell-cryptography/cacophony) and [Snow](https://github.com/mcginty/snow) test vectors
     * Supported pre-made handshake patterns verified
     * Test harness in [vectors/](vectors/)
-
-## Roadmap
-
-Planned features:
-
-* Dedicated `TransportState` variant for unreliable transport protocols (UDP)
-    * Some form of encryption nonce `n` would be delivered along the transport message
-    * Receiving party would validate the nonce and use it to decrypt the message
-    * This would provide (more) robust transport in case of dropped or out-of-order messages
-* Built-in support for more KEM variants
-* Benchmarking and optimization
 
 ## Changelog
 

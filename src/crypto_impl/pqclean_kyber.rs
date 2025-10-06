@@ -6,7 +6,7 @@ use pqcrypto_traits::kem::{Ciphertext, PublicKey, SecretKey, SharedSecret};
 
 use crate::bytearray::{ByteArray, SensitiveByteArray};
 use crate::error::KemError;
-use crate::traits::{CryptoComponent, Kem};
+use crate::traits::{CryptoComponent, Kem, Rng};
 use crate::KeyPair;
 
 /// Kyber512 KEM implementation
@@ -55,7 +55,7 @@ macro_rules! impl_kyber {
 
             type Ss = SensitiveByteArray<[u8; $module::shared_secret_bytes()]>;
 
-            fn genkey<R: rand_core::RngCore + rand_core::CryptoRng>(
+            fn genkey_rng<R: Rng>(
                 _rng: &mut R,
             ) -> crate::error::KemResult<crate::KeyPair<Self::PubKey, Self::SecretKey>> {
                 // PQClean uses their own RNG
@@ -66,7 +66,7 @@ macro_rules! impl_kyber {
                 })
             }
 
-            fn encapsulate<R: rand_core::RngCore + rand_core::CryptoRng>(
+            fn encapsulate<R: Rng>(
                 pk: &[u8],
                 _rng: &mut R,
             ) -> crate::error::KemResult<(Self::Ct, Self::Ss)> {

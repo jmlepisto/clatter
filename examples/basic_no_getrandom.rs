@@ -3,28 +3,54 @@ use clatter::crypto::dh::X25519;
 use clatter::crypto::hash::Sha512;
 use clatter::handshakepattern::noise_xx;
 use clatter::traits::{Dh, Handshaker};
-use clatter::NqHandshake;
+// In no-std environments where getrandom is not supported we must use the lower level XXHandshakeCore structs
+use clatter::NqHandshakeCore;
+
+// You'll have to define your own bindings to your platform RNG services if you do not wish to add support for getrandom.
+// Usually this is NOT the smartest way to go, but you should rather consider adding bindings for getrandom, which will handle
+// everything automatically from there. The crate feature "getrandom" can be enabled without "std".
+#[derive(Default)]
+struct MyRng;
+
+impl rand_core::RngCore for MyRng {
+    fn next_u32(&mut self) -> u32 {
+        return 42; // Replace with true randomness from reliable and secure system RNG
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        return 42; // Replace with true randomness from reliable and secure system RNG
+    }
+
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        dest.fill_with(|| 42); // Replace with true randomness from reliable and secure system RNG
+    }
+
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+        dest.fill_with(|| 42); // Replace with true randomness from reliable and secure system RNG
+        Ok(())
+    }
+}
+
+// Marker trait; we promise that MyRng is secure
+impl rand_core::CryptoRng for MyRng {}
 
 fn main() {
-    let mut rng_alice = rand::thread_rng();
-    let mut rng_bob = rand::thread_rng();
+    let mut rng_alice = MyRng;
+    let mut rng_bob = MyRng;
 
     // Generate keys
     let alice_s = X25519::genkey_rng(&mut rng_alice).unwrap();
     let bob_s = X25519::genkey_rng(&mut rng_bob).unwrap();
 
-    let mut alice = NqHandshake::<X25519, ChaChaPoly, Sha512>::new(
-        noise_xx(),
-        &[],
-        true,
-        Some(alice_s),
-        None,
-        None,
-        None,
-    )
+    let mut alice = NqHandshakeCore::<
+        X25519,
+        ChaChaPoly,
+        Sha512,
+        /* Here we instruct the handshaker to use our RNG */ MyRng,
+    >::new(noise_xx(), &[], true, Some(alice_s), None, None, None)
     .unwrap();
 
-    let mut bob = NqHandshake::<X25519, ChaChaPoly, Sha512>::new(
+    let mut bob = NqHandshakeCore::<X25519, ChaChaPoly, Sha512, MyRng>::new(
         noise_xx(),
         &[],
         false,

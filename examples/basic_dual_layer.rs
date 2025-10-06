@@ -1,5 +1,3 @@
-use core::str;
-
 use clatter::crypto::cipher::ChaChaPoly;
 use clatter::crypto::dh::X25519;
 use clatter::crypto::hash::Sha512;
@@ -9,12 +7,7 @@ use clatter::traits::Handshaker;
 use clatter::{DualLayerHandshake, NqHandshake, PqHandshake};
 
 fn main() {
-    let mut rng_alice_nq = rand::thread_rng();
-    let mut rng_bob_nq = rand::thread_rng();
-    let mut rng_alice_pq = rand::thread_rng();
-    let mut rng_bob_pq = rand::thread_rng();
-
-    let alice_nq = NqHandshake::<X25519, ChaChaPoly, Sha512, _>::new(
+    let alice_nq = NqHandshake::<X25519, ChaChaPoly, Sha512>::new(
         noise_nn(),
         &[],
         true,
@@ -22,11 +15,10 @@ fn main() {
         None,
         None,
         None,
-        &mut rng_alice_nq,
     )
     .unwrap();
 
-    let bob_nq = NqHandshake::<X25519, ChaChaPoly, Sha512, _>::new(
+    let bob_nq = NqHandshake::<X25519, ChaChaPoly, Sha512>::new(
         noise_nn(),
         &[],
         false,
@@ -34,11 +26,10 @@ fn main() {
         None,
         None,
         None,
-        &mut rng_bob_nq,
     )
     .unwrap();
 
-    let alice_pq = PqHandshake::<MlKem512, MlKem512, ChaChaPoly, Sha512, _>::new(
+    let alice_pq = PqHandshake::<MlKem512, MlKem512, ChaChaPoly, Sha512>::new(
         noise_pqnn(),
         &[],
         true,
@@ -46,11 +37,10 @@ fn main() {
         None,
         None,
         None,
-        &mut rng_alice_pq,
     )
     .unwrap();
 
-    let bob_pq = PqHandshake::<MlKem512, MlKem512, ChaChaPoly, Sha512, _>::new(
+    let bob_pq = PqHandshake::<MlKem512, MlKem512, ChaChaPoly, Sha512>::new(
         noise_pqnn(),
         &[],
         false,
@@ -58,7 +48,6 @@ fn main() {
         None,
         None,
         None,
-        &mut rng_bob_pq,
     )
     .unwrap();
 

@@ -48,73 +48,105 @@
 //! To improve build times and produce more optimized binaries, Clatter can be heavily configured by
 //! enabling and disabling crate features. Below is a listing of the available features:
 //!
-//! | Feature flag              | Description                               | Default   | Details                                   |
-//! | ---                       | ---                                       | ---       | ---                                       |
-//! | `use-25519`               | Enable X25519 DH                          | yes       |                                           |
-//! | `use-aes-gcm`             | Enable AES-GCM cipher                     | yes       |                                           |
-//! | `use-chacha20poly1305`    | Enable ChaCha20-Poly1305 cipher           | yes       |                                           |
-//! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing        | yes       |                                           |
-//! | `use-blake2`              | Enable BLAKE2 hashing                     | yes       |                                           |
-//! | `use-rust-crypto-ml-kem`  | Enable ML-KEM (Kyber) KEMs by RustCrypto  | yes       |                                           |
-//! | `use-pqclean-kyber`       | Enable Kyber KEMs by PQClean              | yes       |                                           |
-//! | `std`                     | Enable standard library support           | no        | Enables `std` for supported dependencies  |
-//! | `alloc`                   | Enable allocator support                  | no        |                                           |
+//! | Feature flag              | Description                                           | Default   | Details                                                           |
+//! | ---                       | ---                                                   | ---       | ---                                                               |
+//! | `use-25519`               | Enable X25519 DH                                      | yes       |                                                                   |
+//! | `use-aes-gcm`             | Enable AES-GCM cipher                                 | yes       |                                                                   |
+//! | `use-chacha20poly1305`    | Enable ChaCha20-Poly1305 cipher                       | yes       |                                                                   |
+//! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing                    | yes       |                                                                   |
+//! | `use-blake2`              | Enable BLAKE2 hashing                                 | yes       |                                                                   |
+//! | `use-rust-crypto-ml-kem`  | Enable ML-KEM (Kyber) KEMs by RustCrypto              | yes       |                                                                   |
+//! | `use-pqclean-kyber`       | Enable Kyber KEMs by PQClean                          | yes       |                                                                   |
+//! | `std`                     | Enable standard library support                       | yes       | Enables `std` for supported dependencies                          |
+//! | `alloc`                   | Enable allocator support                              | yes       | Enables dynamically sized buffer types in [`crate::bytearray`]    |
+//! | `getrandom`               | Enable automatic system RNG support via [`getrandom`] | yes       | Can be used without `std`                                         |
 //!
 //! ## Example
 //!
 //! Simplified example with the most straightforward (and unsecure) PQ handshake pattern and
 //! no handshake payload data at all:
 //!
-//! ```no_run
+//! ```rust
 //! use clatter::crypto::cipher::ChaChaPoly;
 //! use clatter::crypto::hash::Sha512;
+//! use clatter::crypto::kem::pqclean_kyber::Kyber768;
+//! // We can mix and match KEMs from different vendors
 //! use clatter::crypto::kem::rust_crypto_ml_kem::MlKem512;
 //! use clatter::handshakepattern::noise_pqnn;
 //! use clatter::traits::Handshaker;
 //! use clatter::PqHandshake;
 //!
-//! let mut rng_alice = rand::thread_rng();
 //!
-//! // Instantiate initiator handshake
-//! let mut alice = PqHandshake::<MlKem512, MlKem512, ChaChaPoly, Sha512, _>::new(
-//!     noise_pqnn(),   // Handshake pattern
-//!     &[],            // Prologue data
-//!     true,           // Are we the initiator
-//!     None,           // Pre-shared keys..
-//!     None,           // ..
-//!     None,           // ..
-//!     None,           // ..
-//!     &mut rng_alice, // RNG instance
-//! ).unwrap();
+//! let mut alice = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, Sha512>::new(
+//!     noise_pqnn(),
+//!     &[],
+//!     true,
+//!     None,
+//!     None,
+//!     None,
+//!     None,
+//! )
+//! .unwrap();
 //!
-//! let mut buf_alice_send = [0u8; 4096];
+//! let mut bob = PqHandshake::<MlKem512, Kyber768, ChaChaPoly, Sha512>::new(
+//!     noise_pqnn(),
+//!     &[],
+//!     false,
+//!     None,
+//!     None,
+//!     None,
+//!     None,
+//! )
+//! .unwrap();
 //!
-//! // Send and receive handshake messages until the handshake is completed
-//! loop {
-//!     if alice.is_write_turn() {
-//!         // Write handshake message to buf_alice_send
-//!         let n = alice.write_message(&[], &mut buf_alice_send).unwrap();
-//!         // --> Deliver buf_alice_send[..n] to peer
-//!     } else {
-//!         // <-- Receive message from peer to &buf_alice_receive
-//!         let buf_alice_receive = [0u8];
-//!         // Process received handshake message
-//!         let _ = alice.read_message(&buf_alice_receive, &mut[]).unwrap();
-//!     }
+//! // Handshake message buffers
+//! let mut buf_alice = [0u8; 4096];
+//! let mut buf_bob = [0u8; 4096];
 //!
-//!     if alice.is_finished() {
-//!         break;
-//!     }
-//! }
+//! // First handshake message from initiator to responder
+//! // e -->
+//! let n = alice.write_message(&[], &mut buf_alice).unwrap();
+//! let _ = bob.read_message(&buf_alice[..n], &mut buf_bob).unwrap();
 //!
-//! // Move to transport state
+//! // Second handshake message from responder to initiator
+//! // <-- ekem
+//! let n = bob.write_message(&[], &mut buf_bob).unwrap();
+//! let _ = alice.read_message(&buf_bob[..n], &mut buf_alice).unwrap();
+//!
+//! // Handshake should be done
+//! assert!(alice.is_finished() && bob.is_finished());
+//!
+//! // Finish handshakes and move to transport mode
 //! let mut alice = alice.finalize().unwrap();
+//! let mut bob = bob.finalize().unwrap();
 //!
-//! // All done! Use .send() and .receive() on the transport state to encrypt
-//! // and decrypt communication with the peer
-//! let n = alice.send(b"Hello from Alice", &mut buf_alice_send).unwrap();
-//! // --> Send &buf_alice_send[..n]) to peer
+//! // Send a message from Alice to Bob
+//! let msg = b"Hello from initiator";
+//! let n = alice.send(msg, &mut buf_alice).unwrap();
+//! let n = bob.receive(&buf_alice[..n], &mut buf_bob).unwrap();
+//!
+//! println!(
+//!     "Bob received from Alice: {}",
+//!     str::from_utf8(&buf_bob[..n]).unwrap()
+//! );
 //! ```
+//!
+//! ## `no_std` targets
+//! 
+//! `std` feature is enabled by default. Disable default features and pick only the ones
+//! you require when running on `no_std` targets.
+//!
+//! The only real platform service Clatter requires is the RNG. Clatter includes full
+//! support for the [`getrandom`] crate (via the `getrandom` feature flag) which can be
+//! enabled without `std` features. If your platform is not already supported by
+//! `getrandom`, the most straightforward way to use Clatter is to create `getrandom`
+//! bindings for your custom platform backend. Detailed instructions and examples can be
+//! found in the [`getrandom`] crate documentation.
+//!
+//! If you do not add `getrandom` support, Clatter can still be used. In this case you
+//! are restricted to the lower-level [`NqHandshakeCore`] and [`PqHandshakeCore`] types and
+//! must implement your own custom RNG provides that implements the traits defined by
+//! [`crate::traits::Rng`].
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -131,10 +163,12 @@ pub mod traits;
 pub mod transportstate;
 
 pub use handshakestate::dual_layer::DualLayerHandshake;
-pub use handshakestate::nq::NqHandshake;
-pub use handshakestate::pq::PqHandshake;
+pub use handshakestate::nq::NqHandshakeCore;
+pub use handshakestate::pq::PqHandshakeCore;
 pub use traits::Handshaker;
 use zeroize::{Zeroize, ZeroizeOnDrop};
+#[cfg(feature = "getrandom")]
+pub use {handshakestate::nq::NqHandshake, handshakestate::pq::PqHandshake};
 
 /// Concrete crypto implementations
 pub mod crypto {
@@ -174,6 +208,13 @@ pub mod crypto {
         #[cfg_attr(docsrs, doc(cfg(feature = "use-sha")))]
         #[cfg(feature = "use-sha")]
         pub use crate::crypto_impl::sha::{Sha256, Sha512};
+    }
+
+    /// Supported default random number generator(s)
+    pub mod rng {
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
+        #[cfg(feature = "getrandom")]
+        pub use crate::crypto_impl::random::DefaultRng;
     }
 }
 

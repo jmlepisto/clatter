@@ -24,10 +24,10 @@ pub trait CryptoComponent {
 /// Automatically implemented for all types that implement:
 /// * [`RngCore`]
 /// * [`CryptoRng`]
-pub trait Rng: RngCore + CryptoRng {}
+pub trait Rng: RngCore + CryptoRng + Default {}
 
 /// Automatic implementation for all supported types
-impl<T: RngCore + CryptoRng> Rng for T {}
+impl<T: RngCore + CryptoRng + Default> Rng for T {}
 
 /// Common trait for all Diffie-Hellman algorithms
 pub trait Dh: CryptoComponent {
@@ -38,8 +38,14 @@ pub trait Dh: CryptoComponent {
     /// DH output type
     type Output: ByteArray;
 
-    /// Generate a keypair
-    fn genkey<R: Rng>(rng: &mut R) -> DhResult<KeyPair<Self::PubKey, Self::PrivateKey>>;
+    /// Generate a keypair using the given RNG
+    fn genkey_rng<R: Rng>(rng: &mut R) -> DhResult<KeyPair<Self::PubKey, Self::PrivateKey>>;
+
+    /// Generate a keypair using the default RNG
+    #[cfg(feature = "getrandom")]
+    fn genkey() -> DhResult<KeyPair<Self::PubKey, Self::PrivateKey>> {
+        Self::genkey_rng(&mut crate::crypto::rng::DefaultRng)
+    }
 
     /// Extract public key from given private key
     fn pubkey(k: &Self::PrivateKey) -> Self::PubKey;
@@ -59,8 +65,14 @@ pub trait Kem: CryptoComponent {
     /// Shared secret type
     type Ss: ByteArray;
 
-    /// Generate a keypair
-    fn genkey<R: Rng>(rng: &mut R) -> KemResult<KeyPair<Self::PubKey, Self::SecretKey>>;
+    /// Generate a keypair using the given RNG
+    fn genkey_rng<R: Rng>(rng: &mut R) -> KemResult<KeyPair<Self::PubKey, Self::SecretKey>>;
+
+    /// Generate a keypair using the default RNG
+    #[cfg(feature = "getrandom")]
+    fn genkey() -> KemResult<KeyPair<Self::PubKey, Self::SecretKey>> {
+        Self::genkey_rng(&mut crate::crypto::rng::DefaultRng)
+    }
 
     /// Encapsulate a public key and return the ciphertext and shared secret
     fn encapsulate<R: Rng>(pk: &[u8], rng: &mut R) -> KemResult<(Self::Ct, Self::Ss)>;

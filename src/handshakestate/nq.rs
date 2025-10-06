@@ -15,7 +15,11 @@ use crate::traits::{Cipher, Dh, Handshaker, HandshakerInternal, Hash, Rng};
 use crate::KeyPair;
 
 /// Non-post-quantum Noise handshake
-pub struct NqHandshake<'a, DH, C, H, RNG>
+#[cfg(feature = "getrandom")]
+pub type NqHandshake<DH, C, H> = NqHandshakeCore<DH, C, H, crate::crypto::rng::DefaultRng>;
+
+/// Non-post-quantum Noise handshake core with a generic RNG provider
+pub struct NqHandshakeCore<DH, C, H, RNG>
 where
     DH: Dh,
     C: Cipher,
@@ -25,10 +29,10 @@ where
     // Internal, we can live with this
     #[allow(clippy::type_complexity)]
     internals:
-        HandshakeInternals<'a, C, H, RNG, DH::PrivateKey, DH::PubKey, DH::PrivateKey, DH::PubKey>,
+        HandshakeInternals<C, H, RNG, DH::PrivateKey, DH::PubKey, DH::PrivateKey, DH::PubKey>,
 }
 
-impl<'a, DH, CIPHER, HASH, RNG> NqHandshake<'a, DH, CIPHER, HASH, RNG>
+impl<DH, CIPHER, HASH, RNG> NqHandshakeCore<DH, CIPHER, HASH, RNG>
 where
     DH: Dh,
     CIPHER: Cipher,
@@ -45,12 +49,12 @@ where
     /// * `e` - Our ephemeral keys - Shouldn't usually be provided manually
     /// * `rs` - Peer public static key
     /// * `re` - Peer public ephemeral key - Shouldn't usually be provided manually
-    /// * `rng` - RNG to use during the handshake
     ///
     /// # Generic parameters
     /// * `DH` - DH algorithm to use
     /// * `CIPHER` - Cipher algorithm to use
     /// * `HASH` - Hashing algorithm to use
+    /// * `RNG` - RNG to use
     ///
     /// # Panics
     /// * Panics if initialized with a PQ pattern
@@ -63,8 +67,7 @@ where
         e: Option<KeyPair<DH::PubKey, DH::PrivateKey>>,
         rs: Option<DH::PubKey>,
         re: Option<DH::PubKey>,
-        rng: &'a mut RNG,
-    ) -> Result<NqHandshake<'a, DH, CIPHER, HASH, RNG>, HandshakeError> {
+    ) -> Result<NqHandshakeCore<DH, CIPHER, HASH, RNG>, HandshakeError> {
         // No KEMs tolerated here
         assert!(!pattern.is_kem());
 
@@ -162,7 +165,7 @@ where
             initiator_pattern_index: 0,
             responder_pattern_index: 0,
             psks: ArrayVec::<[u8; PSK_LEN], MAX_PSKS>::new(),
-            rng,
+            rng: RNG::default(),
         };
 
         let this = Self { internals };
@@ -205,7 +208,7 @@ where
     }
 }
 
-impl<'a, DH, C, H, RNG> HandshakerInternal<C, H> for NqHandshake<'a, DH, C, H, RNG>
+impl<DH, C, H, RNG> HandshakerInternal<C, H> for NqHandshakeCore<DH, C, H, RNG>
 where
     DH: Dh,
     C: Cipher,
@@ -248,7 +251,7 @@ where
             match *token {
                 Token::E => {
                     if self.internals.e.is_none() {
-                        self.internals.e = Some(DH::genkey(&mut self.internals.rng)?);
+                        self.internals.e = Some(DH::genkey_rng(&mut self.internals.rng)?);
                     }
 
                     let e_pub = &self.internals.e.as_ref().unwrap().public;
@@ -391,7 +394,7 @@ where
     }
 }
 
-impl<'a, DH, C, H, RNG> Handshaker<C, H> for NqHandshake<'a, DH, C, H, RNG>
+impl<DH, C, H, RNG> Handshaker<C, H> for NqHandshakeCore<DH, C, H, RNG>
 where
     DH: Dh,
     C: Cipher,
