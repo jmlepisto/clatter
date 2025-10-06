@@ -10,6 +10,12 @@
 //! with support for [**Post Quantum (PQ) extensions**](https://doi.org/10.1145/3548606.3560577) as presented by
 //! Yawning Angel, Benjamin Dowling, Andreas Hülsing, Peter Schwabe, and Fiona Johanna Weber.
 //!
+//! ⚠️ **Warning** ⚠️
+//!
+//! Clatter is a low-level crate that does not provide much guidance on the security aspects of the protocol(s)
+//! you develop using it. Clatter itself is safe and sound but can easily be used in many unreliable ways.
+//! Solid understanding of cryptography is required.
+//!
 //! From user perspective, everything in this crate is built around three types:
 //!
 //! * [`NqHandshake`] - Classical, non-post-quantum Noise handshake
@@ -28,7 +34,7 @@
 //! Handshake messages are exchanged by the peers until the handshake is completed.
 //! After completion, [`Handshaker::finalize`] is called and the handshake state machine
 //! is consumed into a [`transportstate::TransportState`] instance, which can be used
-//! to decrypt and encrypt communication between the peers.
+//! to encrypt and decrypt communication between the peers.
 //!
 //! ## Handshake Patterns
 //!
@@ -37,8 +43,8 @@
 //!
 //! ## Crypto Vendors
 //!
-//! Currently Clatter has frozen the vendor selection for DH, Cipher and Hash algorithms, but users
-//! can select from multiple KEM vendors.
+//! Currently Clatter has frozen the available selection of DH, Cipher and Hash algorithms, but users
+//! of Clatter can select from multiple KEM vendors.
 //!
 //! Concrete implementations of the crypto algorithms are in the [`crypto`] module and it is even
 //! possible to use custom implementations using the definitions in the [`traits`] module.
