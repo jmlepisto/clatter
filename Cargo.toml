@@ -1,6 +1,6 @@
 [package]
 name = "clatter"
-version = "2.0.0-rc.1"
+version = "2.0.0-rc.2"
 edition = "2021"
 license = "MIT"
 description = "no_std compatible implementation of Noise protocol framework with Post-Quantum extensions"
