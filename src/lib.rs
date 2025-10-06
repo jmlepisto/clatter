@@ -133,7 +133,7 @@
 //!
 //! ## `no_std` targets
 //! 
-//! `std` feature is enabled by deafault. Disable default features and pick only the ones
+//! `std` feature is enabled by default. Disable default features and pick only the ones
 //! you require when running on `no_std` targets.
 //!
 //! The only real platform service Clatter requires is the RNG. Clatter includes full
@@ -141,7 +141,7 @@
 //! enabled without `std` features. If your platform is not already supported by
 //! `getrandom`, the most straightforward way to use Clatter is to create `getrandom`
 //! bindings for your custom platform backend. Detailed instructions and examples can be
-//! found from  the [`getrandom`] crate.
+//! found in the [`getrandom`] crate documentation.
 //!
 //! If you do not add `getrandom` support, Clatter can still be used. In this case you
 //! are restricted to the lower-level [`NqHandshakeCore`] and [`PqHandshakeCore`] types and

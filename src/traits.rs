@@ -44,7 +44,7 @@ pub trait Dh: CryptoComponent {
     /// Generate a keypair using the default RNG
     #[cfg(feature = "getrandom")]
     fn genkey() -> DhResult<KeyPair<Self::PubKey, Self::PrivateKey>> {
-        Self::genkey_rng(&mut crate::crypto_impl::random::DefaultRng)
+        Self::genkey_rng(&mut crate::crypto::rng::DefaultRng)
     }
 
     /// Extract public key from given private key
@@ -71,7 +71,7 @@ pub trait Kem: CryptoComponent {
     /// Generate a keypair using the default RNG
     #[cfg(feature = "getrandom")]
     fn genkey() -> KemResult<KeyPair<Self::PubKey, Self::SecretKey>> {
-        Self::genkey_rng(&mut crate::crypto_impl::random::DefaultRng)
+        Self::genkey_rng(&mut crate::crypto::rng::DefaultRng)
     }
 
     /// Encapsulate a public key and return the ciphertext and shared secret

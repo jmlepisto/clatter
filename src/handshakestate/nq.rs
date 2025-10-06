@@ -16,7 +16,7 @@ use crate::KeyPair;
 
 /// Non-post-quantum Noise handshake
 #[cfg(feature = "getrandom")]
-pub type NqHandshake<DH, C, H> = NqHandshakeCore<DH, C, H, crate::crypto_impl::random::DefaultRng>;
+pub type NqHandshake<DH, C, H> = NqHandshakeCore<DH, C, H, crate::crypto::rng::DefaultRng>;
 
 /// Non-post-quantum Noise handshake core with a generic RNG provider
 pub struct NqHandshakeCore<DH, C, H, RNG>
