@@ -16,12 +16,12 @@
 //! you develop using it. Clatter itself is safe and sound but can easily be used in many unreliable ways.
 //! Solid understanding of cryptography is required.
 //!
-//! From user perspective, everything in this crate is built around three types:
+//! From user perspective, everything in this crate is built around the available handshake types:
 //!
 //! * [`NqHandshake`] - Classical, non-post-quantum Noise handshake
 //! * [`PqHandshake`] - Post-quantum Noise handshake
-//! * [`HybridHandshake`] - True hybrid handshake which uses the outer handshake to encrypt the inner one and cryptogrpahically binds the handshakes together
-//! * [`DualLayerHandshake`] - Naive dual layer handshake which uses the outer handshake to encrypt the inner one
+//! * [`HybridDualLayerHandshake`] - *outer-encrypts-inner* style piped handshake with cryptographic binding between the layers
+//! * [`DualLayerHandshake`] - *outer-encrypts-inner* style piped handshake with fully independent layers
 //!
 //! Users will pick and instantiate the desired handshake state machine with the crypto primitives
 //! and [`handshakepattern::HandshakePattern`] they wish to use and complete the handshake using the
