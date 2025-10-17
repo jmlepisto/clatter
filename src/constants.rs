@@ -14,3 +14,5 @@ pub const MAX_PSKS: usize = 4;
 pub const MAX_TOKENS_PER_HS_MESSAGE: usize = 8;
 /// How many handshake messages a party can send
 pub const MAX_HS_MESSAGES_PER_ROLE: usize = 8;
+/// Hash constant to mix into inner handshake of a dual layer handshake
+pub const HYBRID_DUAL_LAYER_HANDSHAKE_DOMAIN: &[u8] = b"clatter.hybrid_dual_layer.outer";

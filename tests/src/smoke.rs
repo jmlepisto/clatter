@@ -1,14 +1,12 @@
-#![cfg(feature = "getrandom")]
-//! Basic smoke tests - not full coverage on all crypto primitive combinations but good enough
-
-use clatter::bytearray::ByteArray;
 use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
 use clatter::crypto::dh::X25519;
 use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
 use clatter::crypto::kem::{pqclean_ml_kem, rust_crypto_ml_kem};
 use clatter::handshakepattern::*;
 use clatter::traits::{Cipher, Dh, Hash, Kem};
-use clatter::{DualLayerHandshake, Handshaker, NqHandshake, PqHandshake};
+use clatter::{DualLayerHandshake, Handshaker, HybridDualLayerHandshake, NqHandshake, PqHandshake};
+
+use crate::verify_handshake;
 
 const PSKS: &[[u8; 32]] = &[[0; 32], [1; 32], [2; 32], [3; 32]];
 
@@ -215,36 +213,36 @@ fn smoke_dual_layer_handshakes() {
         nq_pattern: HandshakePattern,
         pq_pattern: HandshakePattern,
     ) {
-        dual_layer_handshake::<EKEM, SKEM, DH, ChaChaPoly, Blake2b>(
+        dual_layer_handshakes::<EKEM, SKEM, DH, ChaChaPoly, Blake2b>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
-        dual_layer_handshake::<EKEM, SKEM, DH, ChaChaPoly, Blake2s>(
+        dual_layer_handshakes::<EKEM, SKEM, DH, ChaChaPoly, Blake2s>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
-        dual_layer_handshake::<EKEM, SKEM, DH, ChaChaPoly, Sha256>(
+        dual_layer_handshakes::<EKEM, SKEM, DH, ChaChaPoly, Sha256>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
-        dual_layer_handshake::<EKEM, SKEM, DH, ChaChaPoly, Sha512>(
+        dual_layer_handshakes::<EKEM, SKEM, DH, ChaChaPoly, Sha512>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
 
-        dual_layer_handshake::<EKEM, SKEM, DH, AesGcm, Blake2b>(
+        dual_layer_handshakes::<EKEM, SKEM, DH, AesGcm, Blake2b>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
-        dual_layer_handshake::<EKEM, SKEM, DH, AesGcm, Blake2s>(
+        dual_layer_handshakes::<EKEM, SKEM, DH, AesGcm, Blake2s>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
-        dual_layer_handshake::<EKEM, SKEM, DH, AesGcm, Sha256>(
+        dual_layer_handshakes::<EKEM, SKEM, DH, AesGcm, Sha256>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
-        dual_layer_handshake::<EKEM, SKEM, DH, AesGcm, Sha512>(
+        dual_layer_handshakes::<EKEM, SKEM, DH, AesGcm, Sha512>(
             nq_pattern.clone(),
             pq_pattern.clone(),
         );
@@ -293,7 +291,7 @@ fn smoke_dual_layer_handshakes() {
     }
 }
 
-fn dual_layer_handshake<EKEM: Kem, SKEM: Kem, DH: Dh, C: Cipher, H: Hash>(
+fn dual_layer_handshakes<EKEM: Kem, SKEM: Kem, DH: Dh, C: Cipher, H: Hash>(
     nq_pattern: HandshakePattern,
     pq_pattern: HandshakePattern,
 ) {
@@ -369,54 +367,15 @@ fn dual_layer_handshake<EKEM: Kem, SKEM: Kem, DH: Dh, C: Cipher, H: Hash>(
         bob_pq.push_psk(psk);
     }
 
-    // -- Prepare dual layer handshake --
-    let mut alice = DualLayerHandshake::<_, _, _, _, 8182>::new(alice_nq, alice_pq);
-    let mut bob = DualLayerHandshake::<_, _, _, _, 8182>::new(bob_nq, bob_pq);
+    // -- Prepare and verify dual layer handshakes --
+    let alice = DualLayerHandshake::<_, _, _, _, 8182>::new(alice_nq.clone(), alice_pq.clone());
+    let bob = DualLayerHandshake::<_, _, _, _, 8182>::new(bob_nq.clone(), bob_pq.clone());
+    verify_handshake(alice, bob);
 
-    let mut alice_buf = [0u8; 8182];
-    let mut bob_buf = [0u8; 8182];
-
-    loop {
-        if alice.is_write_turn() && !bob.is_write_turn() {
-            let n = alice.write_message(&[], &mut alice_buf).unwrap();
-            let _ = bob.read_message(&alice_buf[..n], &mut bob_buf).unwrap();
-        } else if !alice.is_write_turn() && bob.is_write_turn() {
-            let n = bob.write_message(&[], &mut bob_buf).unwrap();
-            let _ = alice.read_message(&bob_buf[..n], &mut alice_buf).unwrap();
-        } else {
-            panic!("State issue");
-        }
-
-        if alice.is_finished() && bob.is_finished() {
-            break;
-        }
-    }
-
-    let mut alice = alice.finalize().unwrap();
-    let mut bob = bob.finalize().unwrap();
-
-    // "Normal" send-receive
-    let n = alice
-        .send(b"Scream without a sound", &mut alice_buf)
-        .unwrap();
-    let n = bob.receive(&alice_buf[..n], &mut bob_buf).unwrap();
-    assert_eq!(bob_buf[..n], *b"Scream without a sound");
-
-    // In-place send-receive
-    let mut in_place_buf = [0; 4096];
-    let msg = b"Flying off the handle";
-    in_place_buf[..msg.len()].copy_from_slice(msg);
-    let n = alice.send_in_place(&mut in_place_buf, msg.len()).unwrap();
-    let n = bob.receive_in_place(&mut in_place_buf, n).unwrap();
-    assert_eq!(in_place_buf[..n], *msg);
-
-    // Vec send-receive
-    #[cfg(feature = "alloc")]
-    assert_eq!(
-        &bob.receive_vec(&alice.send_vec(b"Eugene gene the dance machine").unwrap())
-            .unwrap(),
-        b"Eugene gene the dance machine"
-    );
+    let alice =
+        HybridDualLayerHandshake::<_, _, _, _, 8182>::new(alice_nq.clone(), alice_pq.clone());
+    let bob = HybridDualLayerHandshake::<_, _, _, _, 8182>::new(bob_nq.clone(), bob_pq.clone());
+    verify_handshake(alice, bob);
 }
 
 fn nq_handshake<DH: Dh, C: Cipher, H: Hash>(pattern: HandshakePattern) {
@@ -454,50 +413,7 @@ fn nq_handshake<DH: Dh, C: Cipher, H: Hash>(pattern: HandshakePattern) {
         bob.push_psk(psk);
     }
 
-    let mut alice_buf = [0u8; 4096];
-    let mut bob_buf = [0u8; 4096];
-
-    loop {
-        let n = alice.write_message(&[], &mut alice_buf).unwrap();
-        let _ = bob.read_message(&alice_buf[..n], &mut bob_buf).unwrap();
-
-        if alice.is_finished() && bob.is_finished() {
-            break;
-        }
-
-        let n = bob.write_message(&[], &mut bob_buf).unwrap();
-        let _ = alice.read_message(&bob_buf[..n], &mut alice_buf).unwrap();
-
-        if alice.is_finished() && bob.is_finished() {
-            break;
-        }
-    }
-
-    let mut alice = alice.finalize().unwrap();
-    let mut bob = bob.finalize().unwrap();
-
-    // "Normal" send-receive
-    let n = alice
-        .send(b"Scream without a sound", &mut alice_buf)
-        .unwrap();
-    let n = bob.receive(&alice_buf[..n], &mut bob_buf).unwrap();
-    assert_eq!(bob_buf[..n], *b"Scream without a sound");
-
-    // In-place send-receive
-    let mut in_place_buf = [0; 4096];
-    let msg = b"Flying off the handle";
-    in_place_buf[..msg.len()].copy_from_slice(msg);
-    let n = alice.send_in_place(&mut in_place_buf, msg.len()).unwrap();
-    let n = bob.receive_in_place(&mut in_place_buf, n).unwrap();
-    assert_eq!(in_place_buf[..n], *msg);
-
-    // Vec send-receive
-    #[cfg(feature = "alloc")]
-    assert_eq!(
-        &bob.receive_vec(&alice.send_vec(b"Eugene gene the dance machine").unwrap())
-            .unwrap(),
-        b"Eugene gene the dance machine"
-    );
+    verify_handshake(alice, bob);
 }
 
 fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePattern) {
@@ -535,49 +451,5 @@ fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePatt
         bob.push_psk(psk);
     }
 
-    let mut alice_buf = [0u8; 8182];
-    let mut bob_buf = [0u8; 8182];
-
-    loop {
-        let n = alice.write_message(&[], &mut alice_buf).unwrap();
-        let _ = bob.read_message(&alice_buf[..n], &mut bob_buf).unwrap();
-
-        if alice.is_finished() && bob.is_finished() {
-            break;
-        }
-
-        let n = bob.write_message(&[], &mut bob_buf).unwrap();
-        let _ = alice.read_message(&bob_buf[..n], &mut alice_buf).unwrap();
-
-        if alice.is_finished() && bob.is_finished() {
-            break;
-        }
-    }
-
-    let mut alice = alice.finalize().unwrap();
-    let mut bob = bob.finalize().unwrap();
-
-    // "Normal" send-receive
-    let n = alice
-        .send(b"Find I've come full circle", &mut alice_buf)
-        .unwrap();
-    let n = bob.receive(&alice_buf[..n], &mut bob_buf).unwrap();
-
-    assert_eq!(bob_buf[..n], *b"Find I've come full circle");
-
-    // In-place send-receive
-    let mut in_place_buf = [0; 4096];
-    let msg = b"On a gleaming razor's edge";
-    in_place_buf[..msg.len()].copy_from_slice(msg);
-    let n = alice.send_in_place(&mut in_place_buf, msg.len()).unwrap();
-    let n = bob.receive_in_place(&mut in_place_buf, n).unwrap();
-    assert_eq!(in_place_buf[..n], *msg);
-
-    // Vec send-receive
-    #[cfg(feature = "alloc")]
-    assert_eq!(
-        &bob.receive_vec(&alice.send_vec(b"This story ends where it began").unwrap())
-            .unwrap(),
-        b"This story ends where it began"
-    );
+    verify_handshake(alice, bob);
 }

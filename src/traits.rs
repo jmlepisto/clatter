@@ -14,7 +14,7 @@ use crate::transportstate::TransportState;
 use crate::KeyPair;
 
 /// Common trait for all crypto components
-pub trait CryptoComponent {
+pub trait CryptoComponent: Clone {
     /// Name of this algorithm
     fn name() -> &'static str;
 }
@@ -24,10 +24,10 @@ pub trait CryptoComponent {
 /// Automatically implemented for all types that implement:
 /// * [`RngCore`]
 /// * [`CryptoRng`]
-pub trait Rng: RngCore + CryptoRng + Default {}
+pub trait Rng: RngCore + CryptoRng + Default + Clone {}
 
 /// Automatic implementation for all supported types
-impl<T: RngCore + CryptoRng + Default> Rng for T {}
+impl<T: RngCore + CryptoRng + Default + Clone> Rng for T {}
 
 /// Common trait for all Diffie-Hellman algorithms
 pub trait Dh: CryptoComponent {
@@ -275,8 +275,28 @@ where
     fn read_message_impl(&mut self, message: &[u8], out: &mut [u8]) -> HandshakeResult<usize>;
     /// Extract ciphers
     fn get_ciphers(&self) -> CipherStates<C>;
-    /// Get handshake hash
+    /// Get handshake hash `h`
     fn get_hash(&self) -> H::Output;
+    /// Mix data into the handshake hash `h`
+    ///
+    /// Calling this method during handshakes can break the handshake.
+    /// This should be explicitly called:
+    ///
+    /// * Before handshakes
+    /// * After handshakes
+    /// * During handshakes if you understand the implications of your protocol
+    fn mix_hash(&mut self, data: &[u8]);
+
+    /// Mix key material into the handshake keys `ck` and hash `h`
+    ///
+    /// Calling this method during handshakes can break the handshake.
+    /// This should be explicitly called:
+    ///
+    /// * Before handshakes
+    /// * After handshakes
+    /// * During handshakes if you understand the implications of your protocol
+    fn mix_key_and_hash(&mut self, data: &[u8]);
+
     /// Get handshake pattern
     fn get_pattern(&self) -> HandshakePattern;
 }

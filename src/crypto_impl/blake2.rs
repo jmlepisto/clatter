@@ -4,11 +4,11 @@ use crate::bytearray::{ByteArray, SensitiveByteArray};
 use crate::traits::{CryptoComponent, Hash};
 
 /// BLAKE2b hash implementation
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Blake2b(blake2::Blake2b512);
 
 /// BLAKE2s hash implementation
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Blake2s(blake2::Blake2s256);
 
 impl CryptoComponent for Blake2b {

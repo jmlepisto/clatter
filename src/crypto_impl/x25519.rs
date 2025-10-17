@@ -5,6 +5,7 @@ use crate::traits::{CryptoComponent, Dh, Rng};
 use crate::KeyPair;
 
 /// X25519 DH implementation
+#[derive(Clone)]
 pub struct X25519;
 
 impl CryptoComponent for X25519 {

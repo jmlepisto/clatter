@@ -20,7 +20,8 @@
 //!
 //! * [`NqHandshake`] - Classical, non-post-quantum Noise handshake
 //! * [`PqHandshake`] - Post-quantum Noise handshake
-//! * [`DualLayerHandshake`] - Dual layer handshake, which combines two Noise handshakes
+//! * [`HybridHandshake`] - True hybrid handshake which uses the outer handshake to encrypt the inner one and cryptogrpahically binds the handshakes together
+//! * [`DualLayerHandshake`] - Naive dual layer handshake which uses the outer handshake to encrypt the inner one
 //!
 //! Users will pick and instantiate the desired handshake state machine with the crypto primitives
 //! and [`handshakepattern::HandshakePattern`] they wish to use and complete the handshake using the
@@ -169,6 +170,7 @@ pub mod traits;
 pub mod transportstate;
 
 pub use handshakestate::dual_layer::DualLayerHandshake;
+pub use handshakestate::hybrid_dual_layer::HybridDualLayerHandshake;
 pub use handshakestate::nq::NqHandshakeCore;
 pub use handshakestate::pq::PqHandshakeCore;
 pub use rand_core;

@@ -4,11 +4,11 @@ use crate::bytearray::{ByteArray, SensitiveByteArray};
 use crate::traits::{CryptoComponent, Hash};
 
 /// SHA-512 hasher implementation
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Sha512(sha2::Sha512);
 
 /// SHA-256 hasher implementation
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Sha256(sha2::Sha256);
 
 impl CryptoComponent for Sha512 {

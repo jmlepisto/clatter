@@ -7,6 +7,7 @@ use crate::error::CipherError;
 use crate::traits::{Cipher, CryptoComponent};
 
 /// AES-GCM cipher implementation
+#[derive(Clone)]
 pub struct AesGcm;
 
 impl CryptoComponent for AesGcm {

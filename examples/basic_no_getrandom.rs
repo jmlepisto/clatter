@@ -9,7 +9,7 @@ use clatter::NqHandshakeCore;
 // You'll have to define your own bindings to your platform RNG services if you do not wish to add support for getrandom.
 // Usually this is NOT the smartest way to go, but you should rather consider adding bindings for getrandom, which will handle
 // everything automatically from there. The crate feature "getrandom" can be enabled without "std".
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct MyRng;
 
 impl rand_core::RngCore for MyRng {

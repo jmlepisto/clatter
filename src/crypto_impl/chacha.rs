@@ -7,6 +7,7 @@ use crate::error::CipherError;
 use crate::traits::{Cipher, CryptoComponent};
 
 /// ChaCha20-Poly1305 cipher implementation
+#[derive(Clone)]
 pub struct ChaChaPoly;
 
 impl CryptoComponent for ChaChaPoly {

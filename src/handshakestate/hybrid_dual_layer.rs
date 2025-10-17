@@ -1,29 +1,33 @@
+use crate::bytearray::ByteArray;
+use crate::constants::HYBRID_DUAL_LAYER_HANDSHAKE_DOMAIN;
 use crate::error::HandshakeResult;
 use crate::traits::{Cipher, Handshaker, HandshakerInternal, Hash};
 use crate::transportstate::TransportState;
 
-/// Dual layer handshake
+/// Dual layer hybrid handshake
 ///
-/// An "outer-encrypts-inner" dual layer handshake with fully independent layers.
-/// The outer handshake is completed first, after which the inner handshake
-/// starts and all the related handshake messages are encrypted using
-/// the outer layers resulting transport encryption.
+/// An "outer-encrypts-inner" hybrid handshake scheme which completes two handshakes:
+/// an inner one and an outer one. The resulting handshake hash from the outer one is
+/// mixed in to the inner handshake to bind the handshakes together. The resulting
+/// transport keys will thus contain entropy from both handshakes.
 ///
-/// **Warning:** this is a naive approach which does NOT cryptographically bind
-/// the layers together. Use this handshake type only if you know what you are
-/// doing and absolutely require the handshake layers to remain independent.
+/// The following Noise protocol steps are completed for the inner handshake after the outer
+/// handshake finishes:
 ///
-/// Dual layer handshakes require an additional intermediate buffer
+/// * `MixHash("clatter.hybrid_dual_layer.outer")`
+/// * `MixKeyAndHash(h_outer)`
+///
+/// Hybrid handshakes require an additional intermediate buffer
 /// for decrypting outer layer handshake messages. The buffer size
 /// is controlled by the generic parameter `BUF`.
 ///
 /// # Message Sequences
 ///
-/// With dual layer handshakes it is possible to construct handshake pattern
+/// With hybrid handshakes it is possible to construct handshake pattern
 /// combinations which result in one party having to send **two handshake
 /// messages in a row**. Take care when implementing your handshaking logic and
 /// always use [`Self::is_write_turn`] to check who should send next.
-pub struct DualLayerHandshake<Outer, Inner, C, H, const BUF: usize>
+pub struct HybridDualLayerHandshake<Outer, Inner, C, H, const BUF: usize>
 where
     Inner: Handshaker<C, H>,
     Outer: Handshaker<C, H>,
@@ -37,14 +41,14 @@ where
     outer_receive_buf: [u8; BUF],
 }
 
-impl<Outer, Inner, C, H, const BUF: usize> DualLayerHandshake<Outer, Inner, C, H, BUF>
+impl<Outer, Inner, C, H, const BUF: usize> HybridDualLayerHandshake<Outer, Inner, C, H, BUF>
 where
     Inner: Handshaker<C, H>,
     Outer: Handshaker<C, H>,
     C: Cipher,
     H: Hash,
 {
-    /// Initialize a new dual layer handshake
+    /// Initialize a new hybrid handshake
     ///
     /// # Arguments
     /// * `outer` - Outer handshake, which is completed first
@@ -98,13 +102,18 @@ where
         if self.outer.as_ref().unwrap().is_finished() {
             self.outer_transport = Some(self.outer.take().unwrap().finalize()?);
             self.outer_is_finished = true;
+
+            // Mix in hash from the outer handshake to the inner one
+            let h = self.outer_transport.as_ref().unwrap().get_handshake_hash();
+            self.inner.mix_hash(HYBRID_DUAL_LAYER_HANDSHAKE_DOMAIN);
+            self.inner.mix_key_and_hash(h.as_slice());
         }
         Ok(())
     }
 }
 
 impl<Outer, Inner, C, H, const BUF: usize> HandshakerInternal<C, H>
-    for DualLayerHandshake<Outer, Inner, C, H, BUF>
+    for HybridDualLayerHandshake<Outer, Inner, C, H, BUF>
 where
     Inner: Handshaker<C, H>,
     Outer: Handshaker<C, H>,
@@ -205,7 +214,7 @@ where
 }
 
 impl<Outer, Inner, C, H, const BUF: usize> Handshaker<C, H>
-    for DualLayerHandshake<Outer, Inner, C, H, BUF>
+    for HybridDualLayerHandshake<Outer, Inner, C, H, BUF>
 where
     Inner: Handshaker<C, H>,
     Outer: Handshaker<C, H>,
