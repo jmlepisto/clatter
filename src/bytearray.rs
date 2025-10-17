@@ -16,7 +16,7 @@ use arrayvec::ArrayVec;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Simple trait used throughout the codebase to provide portable array operations
-pub trait ByteArray: Sized + Zeroize + PartialEq + Debug {
+pub trait ByteArray: Sized + Zeroize + PartialEq + Debug + Clone {
     /// Initialize a new array with zeros
     fn new_zero() -> Self;
     /// Initialize a new array by filling it with the given element
@@ -32,10 +32,6 @@ pub trait ByteArray: Sized + Zeroize + PartialEq + Debug {
     fn as_slice(&self) -> &[u8];
     /// Borrow this array as a mutable slice
     fn as_mut(&mut self) -> &mut [u8];
-    /// Clone this array
-    fn clone(&self) -> Self {
-        Self::from_slice(self.as_slice())
-    }
 }
 
 /// Encapsulation for all [`ByteArray`] types that is automatically zeroized on drop.
@@ -94,7 +90,7 @@ impl<A: ByteArray> ByteArray for SensitiveByteArray<A> {
 /// Statically sized heap allocated array
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[cfg(feature = "alloc")]
-#[derive(Zeroize, Debug, PartialEq)]
+#[derive(Zeroize, Debug, PartialEq, Clone)]
 pub struct HeapArray<const C: usize>(alloc::vec::Vec<u8>);
 
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]

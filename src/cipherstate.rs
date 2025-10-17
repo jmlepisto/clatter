@@ -20,7 +20,7 @@ pub struct CipherStates<C: Cipher> {
 /// methods for encrypting and decrypting data.
 /// Will automatically increment the nonce and return an
 /// error if that overflows.
-#[derive(ZeroizeOnDrop, Zeroize)]
+#[derive(ZeroizeOnDrop, Zeroize, Clone)]
 pub struct CipherState<C: Cipher> {
     k: C::Key,
     n: u64,

@@ -21,6 +21,7 @@ pub type PqHandshake<EKEM, SKEM, C, H> =
     PqHandshakeCore<EKEM, SKEM, C, H, crate::crypto::rng::DefaultRng>;
 
 /// Post-quantum Noise handshake core with a generic RNG provider
+#[derive(Clone)]
 pub struct PqHandshakeCore<EKEM, SKEM, C, H, RNG>
 where
     EKEM: Kem,
@@ -418,6 +419,14 @@ where
         self.internals.get_hash()
     }
 
+    fn mix_hash(&mut self, data: &[u8]) {
+        self.internals.symmetricstate.mix_hash(data)
+    }
+
+    fn mix_key_and_hash(&mut self, data: &[u8]) {
+        self.internals.symmetricstate.mix_key_and_hash(data)
+    }
+
     fn get_pattern(&self) -> HandshakePattern {
         self.internals.pattern.clone()
     }
@@ -525,10 +534,10 @@ where
     }
 
     fn get_remote_static(&self) -> Option<Self::S> {
-        self.internals.rs.as_ref().map(|rs| rs.clone())
+        self.internals.rs.clone()
     }
 
     fn get_remote_ephemeral(&self) -> Option<Self::E> {
-        self.internals.re.as_ref().map(|re| re.clone())
+        self.internals.re.clone()
     }
 }

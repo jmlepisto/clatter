@@ -18,7 +18,7 @@ use clatter::PqHandshake;
 /// your own custom cryptography. Even if you use well known primitives you must have
 /// the competence to evaluate the risks of integrating such cryptography to Noise protocol
 /// which is not endorsed by the original author.
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct MySillyHash(u128);
 
 // This has to be implemented for all cryptographic components.

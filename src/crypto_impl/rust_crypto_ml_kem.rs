@@ -10,10 +10,13 @@ use crate::traits::{CryptoComponent, Kem, Rng};
 use crate::KeyPair;
 
 /// ML-KEM-512 KEM implementation
+#[derive(Clone)]
 pub struct MlKem512;
 /// ML-KEM-768 KEM implementation
+#[derive(Clone)]
 pub struct MlKem768;
 /// ML-KEM-1024 KEM implementation
+#[derive(Clone)]
 pub struct MlKem1024;
 
 impl CryptoComponent for MlKem512 {

@@ -1,6 +1,5 @@
 #![no_main]
 
-use clatter::bytearray::ByteArray;
 use clatter::constants::MAX_MESSAGE_LEN;
 use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
 use clatter::crypto::dh::X25519;

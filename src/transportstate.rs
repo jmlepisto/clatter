@@ -7,7 +7,6 @@
 //! Methods for rekeying and configuring the encryption nonce are also provided
 //! so that the user can easily implement higher level protocol features.
 
-use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;
 use crate::constants::MAX_MESSAGE_LEN;
 use crate::error::{HandshakeError, HandshakeResult, TransportError, TransportResult};

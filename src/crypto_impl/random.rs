@@ -5,7 +5,7 @@ use rand_core::{CryptoRng, RngCore};
 const RNG_FAILURE_MSG: &str = "Clatter default RNG: system failure";
 
 /// Default system RNG provided by [`getrandom`]
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct DefaultRng;
 
 impl RngCore for DefaultRng {

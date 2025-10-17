@@ -11,6 +11,7 @@ use crate::traits::{Cipher, Hash, Rng};
 use crate::KeyPair;
 
 pub mod dual_layer;
+pub mod hybrid_dual_layer;
 pub mod nq;
 pub mod pq;
 
@@ -27,6 +28,7 @@ pub enum HandshakeStatus {
     Error,
 }
 
+#[derive(Clone)]
 pub(crate) struct HandshakeInternals<C, H, RNG, K, P, EK, EP>
 where
     C: Cipher,

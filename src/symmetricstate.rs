@@ -11,7 +11,7 @@ use crate::error::CipherResult;
 use crate::traits::{Cipher, Hash};
 
 /// Symmetric state used during handshakes to establish session hash and chaining key
-#[derive(ZeroizeOnDrop, Zeroize)]
+#[derive(ZeroizeOnDrop, Zeroize, Clone)]
 pub struct SymmetricState<C, H>
 where
     C: Cipher,

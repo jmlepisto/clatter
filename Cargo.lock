@@ -154,6 +154,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "clatter-test-vectors"
+version = "0.1.0"
+dependencies = [
+ "clatter",
+ "hex",
+ "rand",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "clatter-tests"
+version = "0.0.0"
+dependencies = [
+ "clatter",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -676,17 +694,6 @@ checksum = "fc1de2c688dc15305988b563c3854064043356019f97a4b46276fe734c4f07ea"
 dependencies = [
  "crypto-common",
  "subtle",
-]
-
-[[package]]
-name = "vectors"
-version = "0.1.0"
-dependencies = [
- "clatter",
- "hex",
- "rand",
- "serde",
- "serde_json",
 ]
 
 [[package]]
