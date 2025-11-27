@@ -4,6 +4,17 @@ use arrayvec::ArrayVec;
 
 use crate::constants::{MAX_HS_MESSAGES_PER_ROLE, MAX_TOKENS_PER_HS_MESSAGE};
 
+/// Handshake pattern type
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HandshakeType {
+    /// Classical Noise DH handshake
+    DH,
+    /// PQNoise KEM handshake
+    KEM,
+    /// Hybrid handshake combining both DH and KEM
+    HYBRID,
+}
+
 /// Handshake tokens as defined by the Noise spec and PQNoise paper.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Token {
@@ -37,8 +48,8 @@ pub struct HandshakePattern {
     pre_initiator: ArrayVec<Token, 4>,
     pre_responder: ArrayVec<Token, 4>,
     message_pattern: MessagePattern,
-    is_kem: bool,
     has_psk: bool,
+    hs_type: HandshakeType,
 }
 
 /// Handshake message pattern
@@ -71,6 +82,19 @@ impl MessagePattern {
                 .flatten()
                 .any(|t| *t == Token::Ekem || *t == Token::Skem)
     }
+
+    /// Check if the pattern includes `DH` tokens
+    pub fn has_dh(&self) -> bool {
+        self.initiator
+            .iter()
+            .flatten()
+            .any(|t| matches!(t, Token::EE | Token::ES | Token::SE | Token::SS))
+            || self
+                .responder
+                .iter()
+                .flatten()
+                .any(|t| matches!(t, Token::EE | Token::ES | Token::SE | Token::SS))
+    }
 }
 
 impl HandshakePattern {
@@ -82,6 +106,10 @@ impl HandshakePattern {
     /// * `pre_responder` - Tokens shared by responder pre handshake
     /// * `initiator` - Initiator messages
     /// * `responder` - Responder messages
+    ///
+    /// # Panics
+    /// * If the pattern is invalid (empty pattern, no DH or KEM operations at all)
+    /// * If the message sequences are too long, limits in [`crate::constants`]
     pub fn new(
         name: &'static str,
         pre_initiator: &[Token],
@@ -99,9 +127,20 @@ impl HandshakePattern {
                 .map(|p| p.iter().copied().collect())
                 .collect(),
         };
+
+        let has_kem = message_pattern.has_kem();
+        let has_dh = message_pattern.has_dh();
+
+        let hs_type = match (has_kem, has_dh) {
+            (true, true) => HandshakeType::HYBRID,
+            (true, false) => HandshakeType::KEM,
+            (false, true) => HandshakeType::DH,
+            (false, false) => unreachable!("Invalid handshake pattern"),
+        };
+
         Self {
             name,
-            is_kem: message_pattern.has_kem(),
+            hs_type,
             has_psk: message_pattern.has_psk(),
             message_pattern,
             pre_initiator: pre_initiator.iter().copied().collect(),
@@ -143,11 +182,6 @@ impl HandshakePattern {
         &self.message_pattern.responder[index]
     }
 
-    /// Check if the pattern includes KEM
-    pub(crate) fn is_kem(&self) -> bool {
-        self.is_kem
-    }
-
     /// Check if the pattern includes PSKs
     pub(crate) fn has_psk(&self) -> bool {
         self.has_psk
@@ -161,6 +195,11 @@ impl HandshakePattern {
     /// Check if the pattern is one way
     pub fn is_one_way(&self) -> bool {
         self.message_pattern.responder.is_empty()
+    }
+
+    /// Get the handshake type
+    pub fn get_type(&self) -> HandshakeType {
+        self.hs_type
     }
 
     /// Insert PSK's to the message pattern at given positions, `psks`
@@ -186,6 +225,7 @@ impl HandshakePattern {
 
         Self {
             name,
+            hs_type: self.hs_type,
             has_psk: true,
             pre_initiator: self.pre_initiator.clone(),
             pre_responder: self.pre_responder.clone(),
@@ -193,7 +233,6 @@ impl HandshakePattern {
                 initiator,
                 responder,
             },
-            is_kem: self.is_kem,
         }
     }
 }
@@ -611,22 +650,6 @@ pub fn noise_nn() -> HandshakePattern {
 }
 
 /// ```text
-/// -> s
-/// ...
-/// -> e
-/// <- e, ee, se
-/// ```
-pub fn noise_kn() -> HandshakePattern {
-    HandshakePattern::new(
-        "KN",
-        &[Token::S],
-        &[],
-        &[&[Token::E]],
-        &[&[Token::E, Token::EE, Token::SE]],
-    )
-}
-
-/// ```text
 /// <- s
 /// ...
 /// -> e, es
@@ -639,6 +662,36 @@ pub fn noise_nk() -> HandshakePattern {
         &[Token::S],
         &[&[Token::E, Token::ES]],
         &[&[Token::E, Token::EE]],
+    )
+}
+
+/// ```text
+/// -> e
+/// <- e, ee, s, es
+/// ```
+pub fn noise_nx() -> HandshakePattern {
+    HandshakePattern::new(
+        "NX",
+        &[],
+        &[],
+        &[&[Token::E]],
+        &[&[Token::E, Token::EE, Token::S, Token::ES]],
+    )
+}
+
+/// ```text
+/// -> s
+/// ...
+/// -> e
+/// <- e, ee, se
+/// ```
+pub fn noise_kn() -> HandshakePattern {
+    HandshakePattern::new(
+        "KN",
+        &[Token::S],
+        &[],
+        &[&[Token::E]],
+        &[&[Token::E, Token::EE, Token::SE]],
     )
 }
 
@@ -656,20 +709,6 @@ pub fn noise_kk() -> HandshakePattern {
         &[Token::S],
         &[&[Token::E, Token::ES, Token::SS]],
         &[&[Token::E, Token::EE, Token::SE]],
-    )
-}
-
-/// ```text
-/// -> e
-/// <- e, ee, s, es
-/// ```
-pub fn noise_nx() -> HandshakePattern {
-    HandshakePattern::new(
-        "NX",
-        &[],
-        &[],
-        &[&[Token::E]],
-        &[&[Token::E, Token::EE, Token::S, Token::ES]],
     )
 }
 
@@ -705,20 +744,6 @@ pub fn noise_xn() -> HandshakePattern {
 }
 
 /// ```text
-/// -> e, s
-/// <- e, ee, se
-/// ```
-pub fn noise_in() -> HandshakePattern {
-    HandshakePattern::new(
-        "IN",
-        &[],
-        &[],
-        &[&[Token::E, Token::S]],
-        &[&[Token::E, Token::EE, Token::SE]],
-    )
-}
-
-/// ```text
 /// <- s
 /// ...
 /// -> e, es
@@ -736,6 +761,35 @@ pub fn noise_xk() -> HandshakePattern {
 }
 
 /// ```text
+/// -> e
+/// <- e, ee, s, es
+/// -> s, se
+/// ```
+pub fn noise_xx() -> HandshakePattern {
+    HandshakePattern::new(
+        "XX",
+        &[],
+        &[],
+        &[&[Token::E], &[Token::S, Token::SE]],
+        &[&[Token::E, Token::EE, Token::S, Token::ES]],
+    )
+}
+
+/// ```text
+/// -> e, s
+/// <- e, ee, se
+/// ```
+pub fn noise_in() -> HandshakePattern {
+    HandshakePattern::new(
+        "IN",
+        &[],
+        &[],
+        &[&[Token::E, Token::S]],
+        &[&[Token::E, Token::EE, Token::SE]],
+    )
+}
+
+/// ```text
 /// <- s
 /// ...
 /// -> e, es, s, ss
@@ -748,21 +802,6 @@ pub fn noise_ik() -> HandshakePattern {
         &[Token::S],
         &[&[Token::E, Token::ES, Token::S, Token::SS]],
         &[&[Token::E, Token::EE, Token::SE]],
-    )
-}
-
-/// ```text
-/// -> e
-/// <- e, ee, s, es
-/// -> s, se
-/// ```
-pub fn noise_xx() -> HandshakePattern {
-    HandshakePattern::new(
-        "XX",
-        &[],
-        &[],
-        &[&[Token::E], &[Token::S, Token::SE]],
-        &[&[Token::E, Token::EE, Token::S, Token::ES]],
     )
 }
 
@@ -977,4 +1016,458 @@ pub fn noise_ik_psk2() -> HandshakePattern {
 /// ```
 pub fn noise_ix_psk2() -> HandshakePattern {
     noise_ix().add_psks(&[2], "IXpsk2")
+}
+
+// Hybrid patterns (combining classical DH and PQ KEM):
+
+/// ```text
+/// -> e
+/// <- e, ee, ekem
+/// ```
+pub fn noise_hybrid_nn() -> HandshakePattern {
+    HandshakePattern::new(
+        "hybridNN",
+        &[],
+        &[],
+        &[&[Token::E]],
+        &[&[Token::E, Token::EE, Token::Ekem]],
+    )
+}
+
+/// ```text
+/// <- s
+/// ...
+/// -> skem, e, es
+/// <- e, ee, ekem
+/// ```
+pub fn noise_hybrid_nk() -> HandshakePattern {
+    HandshakePattern::new(
+        "hybridNK",
+        &[],
+        &[Token::S],
+        &[&[Token::Skem, Token::E, Token::ES]],
+        &[&[Token::E, Token::EE, Token::Ekem]],
+    )
+}
+
+/// ```text
+/// -> e
+/// <- e, ee, ekem, s, es
+/// -> skem
+/// ```
+pub fn noise_hybrid_nx() -> HandshakePattern {
+    HandshakePattern::new(
+        "hybridNX",
+        &[],
+        &[],
+        &[&[Token::E], &[Token::Skem]],
+        &[&[Token::E, Token::EE, Token::Ekem, Token::S, Token::ES]],
+    )
+}
+
+/// ```text
+/// -> s
+/// ...
+/// -> e
+/// <- e, ee, se, ekem, skem
+/// ```
+pub fn noise_hybrid_kn() -> HandshakePattern {
+    HandshakePattern::new(
+        "hybridKN",
+        &[Token::S],
+        &[],
+        &[&[Token::E]],
+        &[&[Token::E, Token::EE, Token::SE, Token::Ekem, Token::Skem]],
+    )
+}
+
+/// ```text
+/// -> s
+/// <- s
+/// ...
+/// -> skem, e, es, ss
+/// <- e, ee, se, ekem, skem
+/// ```
+pub fn noise_hybrid_kk() -> HandshakePattern {
+    HandshakePattern::new(
+        "hybridKK",
+        &[Token::S],
+        &[Token::S],
+        &[&[Token::Skem, Token::E, Token::ES, Token::SS]],
+        &[&[Token::E, Token::EE, Token::SE, Token::Ekem, Token::Skem]],
+    )
+}
+
+/// ```text
+/// -> s
+/// ...
+/// -> e
+/// <- e, ee, se, ekem, skem, s, es
+/// -> skem
+/// ```
+pub fn noise_hybrid_kx() -> HandshakePattern {
+    HandshakePattern::new(
+        "hybridKX",
+        &[Token::S],
+        &[],
+        &[&[Token::E], &[Token::Skem]],
+        &[&[
+            Token::E,
+            Token::EE,
+            Token::SE,
+            Token::Ekem,
+            Token::Skem,
+            Token::S,
+            Token::ES,
+        ]],
+    )
+}
+
+/// ```text
+/// -> e
+/// <- e, ee, ekem
+/// -> s, se
+/// <- skem
+/// ```
+pub fn noise_hybrid_xn() -> HandshakePattern {
+    HandshakePattern::new(
+        "hybridXN",
+        &[],
+        &[],
+        &[&[Token::E], &[Token::S, Token::SE]],
+        &[&[Token::E, Token::EE, Token::Ekem], &[Token::Skem]],
+    )
+}
+
+/// ```text
+/// <- s
+/// ...
+/// -> skem, e, es
+/// <- e, ee, ekem
+/// -> s, se
+/// <- skem
+/// ```
+pub fn noise_hybrid_xk() -> HandshakePattern {
+    HandshakePattern::new(
+        "hybridXK",
+        &[],
+        &[Token::S],
+        &[&[Token::Skem, Token::E, Token::ES], &[Token::S, Token::SE]],
+        &[&[Token::E, Token::EE, Token::Ekem], &[Token::Skem]],
+    )
+}
+
+/// ```text
+/// -> e
+/// <- e, ee, ekem, s, es
+/// -> skem, s, se
+/// <- skem
+/// ```
+pub fn noise_hybrid_xx() -> HandshakePattern {
+    HandshakePattern::new(
+        "hybridXX",
+        &[],
+        &[],
+        &[&[Token::E], &[Token::Skem, Token::S, Token::SE]],
+        &[
+            &[Token::E, Token::EE, Token::Ekem, Token::S, Token::ES],
+            &[Token::Skem],
+        ],
+    )
+}
+
+/// ```text
+/// -> e, s
+/// <- e, ee, se, ekem, skem
+/// ```
+pub fn noise_hybrid_in() -> HandshakePattern {
+    HandshakePattern::new(
+        "hybridIN",
+        &[],
+        &[],
+        &[&[Token::E, Token::S]],
+        &[&[Token::E, Token::EE, Token::SE, Token::Ekem, Token::Skem]],
+    )
+}
+
+/// ```text
+/// <- s
+/// ...
+/// -> skem, e, es, s, ss
+/// <- e, ee, se, ekem, skem
+/// ```
+pub fn noise_hybrid_ik() -> HandshakePattern {
+    HandshakePattern::new(
+        "hybridIK",
+        &[],
+        &[Token::S],
+        &[&[Token::Skem, Token::E, Token::ES, Token::S, Token::SS]],
+        &[&[Token::E, Token::EE, Token::SE, Token::Ekem, Token::Skem]],
+    )
+}
+
+/// ```text
+/// -> e, s
+/// <- e, ee, se, ekem, skem, s, es
+/// -> skem
+/// ```
+pub fn noise_hybrid_ix() -> HandshakePattern {
+    HandshakePattern::new(
+        "hybridIX",
+        &[],
+        &[],
+        &[&[Token::E, Token::S], &[Token::Skem]],
+        &[&[
+            Token::E,
+            Token::EE,
+            Token::SE,
+            Token::Ekem,
+            Token::Skem,
+            Token::S,
+            Token::ES,
+        ]],
+    )
+}
+
+// Hybrid patterns with PSKs:
+
+/// ```text
+/// -> psk, e
+/// <- e, ee, ekem
+/// ```
+pub fn noise_hybrid_nn_psk0() -> HandshakePattern {
+    noise_hybrid_nn().add_psks(&[0], "hybridNNpsk0")
+}
+
+/// ```text
+/// -> e
+/// <- e, ee, ekem, psk
+/// ```
+pub fn noise_hybrid_nn_psk2() -> HandshakePattern {
+    noise_hybrid_nn().add_psks(&[2], "hybridNNpsk2")
+}
+
+/// ```text
+/// <- s
+/// ...
+/// -> psk, e, es, skem
+/// <- e, ee, ekem
+/// ```
+pub fn noise_hybrid_nk_psk0() -> HandshakePattern {
+    noise_hybrid_nk().add_psks(&[0], "hybridNKpsk0")
+}
+
+/// ```text
+/// <- s
+/// ...
+/// -> e, es, skem
+/// <- e, ee, ekem, psk
+/// ```
+pub fn noise_hybrid_nk_psk2() -> HandshakePattern {
+    noise_hybrid_nk().add_psks(&[2], "hybridNKpsk2")
+}
+
+/// ```text
+/// -> e
+/// <- e, ee, ekem, s, es, psk
+/// -> se, skem
+/// ```
+pub fn noise_hybrid_nx_psk2() -> HandshakePattern {
+    noise_hybrid_nx().add_psks(&[2], "hybridNXpsk2")
+}
+
+/// ```text
+/// -> e
+/// <- e, ee, ekem
+/// -> s, se, skem, psk
+/// <- skem
+/// ```
+pub fn noise_hybrid_xn_psk3() -> HandshakePattern {
+    noise_hybrid_xn().add_psks(&[3], "hybridXNpsk3")
+}
+
+/// ```text
+/// <- s
+/// ...
+/// -> e, es, skem
+/// <- e, ee, ekem
+/// -> s, se, skem, psk
+/// <- skem
+/// ```
+pub fn noise_hybrid_xk_psk3() -> HandshakePattern {
+    noise_hybrid_xk().add_psks(&[3], "hybridXKpsk3")
+}
+
+/// ```text
+/// -> e
+/// <- e, ee, ekem, s, es
+/// -> se, skem, s, ss, psk
+/// <- skem
+/// ```
+pub fn noise_hybrid_xx_psk3() -> HandshakePattern {
+    noise_hybrid_xx().add_psks(&[3], "hybridXXpsk3")
+}
+
+/// ```text
+/// -> s
+/// ...
+/// -> psk, e
+/// <- e, ee, ekem, se, skem
+/// ```
+pub fn noise_hybrid_kn_psk0() -> HandshakePattern {
+    noise_hybrid_kn().add_psks(&[0], "hybridKNpsk0")
+}
+
+/// ```text
+/// -> s
+/// ...
+/// -> e
+/// <- e, ee, ekem, se, skem, psk
+/// ```
+pub fn noise_hybrid_kn_psk2() -> HandshakePattern {
+    noise_hybrid_kn().add_psks(&[2], "hybridKNpsk2")
+}
+
+/// ```text
+/// -> s
+/// <- s
+/// ...
+/// -> psk, e, es, ss, skem
+/// <- e, ee, ekem, se, skem
+/// ```
+pub fn noise_hybrid_kk_psk0() -> HandshakePattern {
+    noise_hybrid_kk().add_psks(&[0], "hybridKKpsk0")
+}
+
+/// ```text
+/// -> s
+/// <- s
+/// ...
+/// -> e, es, ss, skem
+/// <- e, ee, ekem, se, skem, psk
+/// ```
+pub fn noise_hybrid_kk_psk2() -> HandshakePattern {
+    noise_hybrid_kk().add_psks(&[2], "hybridKKpsk2")
+}
+
+/// ```text
+/// -> s
+/// ...
+/// -> e
+/// <- e, ee, ekem, se, skem, s, es, psk
+/// -> ss, skem
+/// ```
+pub fn noise_hybrid_kx_psk2() -> HandshakePattern {
+    noise_hybrid_kx().add_psks(&[2], "hybridKXpsk2")
+}
+
+/// ```text
+/// -> e, s, psk
+/// <- e, ee, ekem, se, skem
+/// ```
+pub fn noise_hybrid_in_psk1() -> HandshakePattern {
+    noise_hybrid_in().add_psks(&[1], "hybridINpsk1")
+}
+
+/// ```text
+/// -> e, s
+/// <- e, ee, ekem, se, skem, psk
+/// ```
+pub fn noise_hybrid_in_psk2() -> HandshakePattern {
+    noise_hybrid_in().add_psks(&[2], "hybridINpsk2")
+}
+
+/// ```text
+/// <- s
+/// ...
+/// -> e, es, s, ss, skem, psk
+/// <- e, ee, ekem, se, skem
+/// ```
+pub fn noise_hybrid_ik_psk1() -> HandshakePattern {
+    noise_hybrid_ik().add_psks(&[1], "hybridIKpsk1")
+}
+
+/// ```text
+/// <- s
+/// ...
+/// -> e, es, s, ss, skem
+/// <- e, ee, ekem, se, skem, psk
+/// ```
+pub fn noise_hybrid_ik_psk2() -> HandshakePattern {
+    noise_hybrid_ik().add_psks(&[2], "hybridIKpsk2")
+}
+
+/// ```text
+/// -> e, s
+/// <- e, ee, ekem, se, skem, s, es, psk
+/// -> ss, skem
+/// ```
+pub fn noise_hybrid_ix_psk2() -> HandshakePattern {
+    noise_hybrid_ix().add_psks(&[2], "hybridIXpsk2")
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::handshakepattern::{HandshakePattern, HandshakeType, Token};
+
+    #[test]
+    fn resolve_dh() {
+        let pattern = HandshakePattern::new("dh", &[], &[], &[&[Token::EE]], &[&[Token::SE]]);
+        assert_eq!(pattern.get_type(), HandshakeType::DH);
+    }
+
+    #[test]
+    fn resolve_kem() {
+        let pattern = HandshakePattern::new("dh", &[], &[], &[&[Token::Ekem]], &[&[Token::Skem]]);
+        assert_eq!(pattern.get_type(), HandshakeType::KEM);
+    }
+
+    #[test]
+    fn resolve_hybrid() {
+        let pattern = HandshakePattern::new(
+            "dh",
+            &[],
+            &[],
+            &[&[Token::Ekem, Token::SE]],
+            &[&[Token::Skem]],
+        );
+        assert_eq!(pattern.get_type(), HandshakeType::HYBRID);
+    }
+
+    #[test]
+    #[should_panic]
+    fn invalid_pattern_empty() {
+        let _ = HandshakePattern::new("dh", &[], &[], &[], &[]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn invalid_pattern_no_ops() {
+        let _ = HandshakePattern::new("dh", &[], &[], &[&[Token::E, Token::S]], &[]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn too_many_tokens() {
+        let _ = HandshakePattern::new(
+            "dh",
+            &[],
+            &[],
+            &[&[
+                Token::E,
+                Token::E,
+                Token::E,
+                Token::E,
+                Token::E,
+                Token::E,
+                Token::E,
+                Token::E,
+                Token::E,
+                Token::E,
+                Token::E,
+                Token::E,
+            ]],
+            &[],
+        );
+    }
 }

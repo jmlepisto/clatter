@@ -4,7 +4,10 @@ use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
 use clatter::crypto::kem::{pqclean_ml_kem, rust_crypto_ml_kem};
 use clatter::handshakepattern::*;
 use clatter::traits::{Cipher, Dh, Hash, Kem};
-use clatter::{DualLayerHandshake, Handshaker, HybridDualLayerHandshake, NqHandshake, PqHandshake};
+use clatter::{
+    DualLayerHandshake, Handshaker, HybridDualLayerHandshake, HybridHandshake,
+    HybridHandshakeParams, NqHandshake, PqHandshake,
+};
 
 use crate::verify_handshake;
 
@@ -130,6 +133,83 @@ fn smoke_pq_handshakes() {
 
         // One cross-use test just in case with two different KEM vendors
         cipher_hash_combos::<pqclean_ml_kem::MlKem768, rust_crypto_ml_kem::MlKem768>(
+            pattern.clone(),
+        );
+    }
+}
+
+#[test]
+fn smoke_hybrid_handshakes() {
+    let handshakes = [
+        noise_hybrid_ik(),
+        noise_hybrid_in(),
+        noise_hybrid_ix(),
+        noise_hybrid_kk(),
+        noise_hybrid_kn(),
+        noise_hybrid_kx(),
+        noise_hybrid_nk(),
+        noise_hybrid_nn(),
+        noise_hybrid_nx(),
+        noise_hybrid_xk(),
+        noise_hybrid_xn(),
+        noise_hybrid_xx(),
+        noise_hybrid_ik_psk1(),
+        noise_hybrid_ik_psk2(),
+        noise_hybrid_in_psk1(),
+        noise_hybrid_in_psk2(),
+        noise_hybrid_ix_psk2(),
+        noise_hybrid_kk_psk0(),
+        noise_hybrid_kk_psk2(),
+        noise_hybrid_kn_psk0(),
+        noise_hybrid_kn_psk2(),
+        noise_hybrid_kx_psk2(),
+        noise_hybrid_nk_psk0(),
+        noise_hybrid_nk_psk2(),
+        noise_hybrid_nn_psk0(),
+        noise_hybrid_nn_psk2(),
+        noise_hybrid_nx_psk2(),
+        noise_hybrid_xk_psk3(),
+        noise_hybrid_xn_psk3(),
+        noise_hybrid_xx_psk3(),
+    ];
+
+    fn cipher_hash_combos<DH: Dh, EKEM: Kem, SKEM: Kem>(pattern: HandshakePattern) {
+        hybrid_handshake::<DH, EKEM, SKEM, ChaChaPoly, Blake2b>(pattern.clone());
+        hybrid_handshake::<DH, EKEM, SKEM, ChaChaPoly, Blake2s>(pattern.clone());
+        hybrid_handshake::<DH, EKEM, SKEM, ChaChaPoly, Sha256>(pattern.clone());
+        hybrid_handshake::<DH, EKEM, SKEM, ChaChaPoly, Sha512>(pattern.clone());
+
+        hybrid_handshake::<DH, EKEM, SKEM, AesGcm, Blake2b>(pattern.clone());
+        hybrid_handshake::<DH, EKEM, SKEM, AesGcm, Blake2s>(pattern.clone());
+        hybrid_handshake::<DH, EKEM, SKEM, AesGcm, Sha256>(pattern.clone());
+        hybrid_handshake::<DH, EKEM, SKEM, AesGcm, Sha512>(pattern.clone());
+    }
+
+    for pattern in handshakes {
+        // Rust crypto
+        cipher_hash_combos::<X25519, rust_crypto_ml_kem::MlKem512, rust_crypto_ml_kem::MlKem512>(
+            pattern.clone(),
+        );
+        cipher_hash_combos::<X25519, rust_crypto_ml_kem::MlKem768, rust_crypto_ml_kem::MlKem768>(
+            pattern.clone(),
+        );
+        cipher_hash_combos::<X25519, rust_crypto_ml_kem::MlKem1024, rust_crypto_ml_kem::MlKem1024>(
+            pattern.clone(),
+        );
+
+        // PQCLean
+        cipher_hash_combos::<X25519, pqclean_ml_kem::MlKem512, pqclean_ml_kem::MlKem512>(
+            pattern.clone(),
+        );
+        cipher_hash_combos::<X25519, pqclean_ml_kem::MlKem768, pqclean_ml_kem::MlKem768>(
+            pattern.clone(),
+        );
+        cipher_hash_combos::<X25519, pqclean_ml_kem::MlKem1024, pqclean_ml_kem::MlKem1024>(
+            pattern.clone(),
+        );
+
+        // One cross-use test just in case with two different KEM vendors
+        cipher_hash_combos::<X25519, pqclean_ml_kem::MlKem768, rust_crypto_ml_kem::MlKem768>(
             pattern.clone(),
         );
     }
@@ -444,6 +524,45 @@ fn pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePatt
         None,
     )
     .unwrap();
+
+    // Push PSKs every time. No harm done if the pattern doesn't use those.
+    for psk in PSKS {
+        alice.push_psk(psk);
+        bob.push_psk(psk);
+    }
+
+    verify_handshake(alice, bob);
+}
+
+fn hybrid_handshake<DH: Dh, EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: HandshakePattern) {
+    // Generate static keys
+    let alice_dh_keys = DH::genkey().unwrap();
+    let alice_dh_pub = alice_dh_keys.public.clone();
+    let bob_dh_keys = DH::genkey().unwrap();
+    let bob_dh_pub = bob_dh_keys.public.clone();
+
+    let alice_kem_keys = SKEM::genkey().unwrap();
+    let alice_kem_pub = alice_kem_keys.public.clone();
+    let bob_kem_keys = SKEM::genkey().unwrap();
+    let bob_kem_pub = bob_kem_keys.public.clone();
+
+    let alice_params = HybridHandshakeParams::new(pattern.clone(), true)
+        .with_prologue(b"Stumbling all around")
+        .with_s(alice_dh_keys)
+        .with_rs(bob_dh_pub)
+        .with_s_kem(alice_kem_keys)
+        .with_rs_kem(bob_kem_pub);
+
+    let mut alice = HybridHandshake::<DH, EKEM, SKEM, C, H>::new(alice_params).unwrap();
+
+    let bob_params = HybridHandshakeParams::new(pattern.clone(), false)
+        .with_prologue(b"Stumbling all around")
+        .with_s(bob_dh_keys)
+        .with_rs(alice_dh_pub)
+        .with_s_kem(bob_kem_keys)
+        .with_rs_kem(alice_kem_pub);
+
+    let mut bob = HybridHandshake::<DH, EKEM, SKEM, C, H>::new(bob_params).unwrap();
 
     // Push PSKs every time. No harm done if the pattern doesn't use those.
     for psk in PSKS {

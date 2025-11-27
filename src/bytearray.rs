@@ -15,8 +15,15 @@ use core::fmt::Debug;
 use arrayvec::ArrayVec;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-/// Simple trait used throughout the codebase to provide portable array operations
+/// Simple trait used throughout the codebase to provide portable array operations.
+///
+/// The trait exposes an associated constant [`LENGTH`] which is known at compile-time,
+/// allowing the array length to be used in const contexts without explicitly specifying
+/// a const generic parameter everywhere.
 pub trait ByteArray: Sized + Zeroize + PartialEq + Debug + Clone {
+    /// Array length
+    const LENGTH: usize;
+
     /// Initialize a new array with zeros
     fn new_zero() -> Self;
     /// Initialize a new array by filling it with the given element
@@ -24,10 +31,12 @@ pub trait ByteArray: Sized + Zeroize + PartialEq + Debug + Clone {
     /// Initialize a new array by copying it from the given slice
     ///
     /// # Panics
-    /// * Panics if the slice length does not match this array length
+    /// Panics if the slice length does not match this array length
     fn from_slice(_: &[u8]) -> Self;
     /// Array length
-    fn len() -> usize;
+    fn len() -> usize {
+        Self::LENGTH
+    }
     /// Borrow this array as a slice
     fn as_slice(&self) -> &[u8];
     /// Borrow this array as a mutable slice
@@ -43,7 +52,7 @@ pub struct SensitiveByteArray<A: ByteArray>(A);
 
 impl<A: ByteArray> SensitiveByteArray<A> {
     /// Encapsulate the given [`ByteArray`]
-    pub fn new(a: A) -> SensitiveByteArray<A> {
+    pub fn new(a: A) -> Self {
         Self(a)
     }
 }
@@ -62,6 +71,8 @@ impl<A: ByteArray> core::ops::DerefMut for SensitiveByteArray<A> {
 }
 
 impl<A: ByteArray> ByteArray for SensitiveByteArray<A> {
+    const LENGTH: usize = A::LENGTH;
+
     fn new_zero() -> Self {
         Self::new(A::new_zero())
     }
@@ -72,10 +83,6 @@ impl<A: ByteArray> ByteArray for SensitiveByteArray<A> {
 
     fn from_slice(s: &[u8]) -> Self {
         Self::new(A::from_slice(s))
-    }
-
-    fn len() -> usize {
-        A::len()
     }
 
     fn as_slice(&self) -> &[u8] {
@@ -91,28 +98,27 @@ impl<A: ByteArray> ByteArray for SensitiveByteArray<A> {
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[cfg(feature = "alloc")]
 #[derive(Zeroize, Debug, PartialEq, Clone)]
-pub struct HeapArray<const C: usize>(alloc::vec::Vec<u8>);
+pub struct HeapArray<const N: usize>(alloc::vec::Vec<u8>);
 
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[cfg(feature = "alloc")]
-impl<const C: usize> ByteArray for HeapArray<C> {
+impl<const N: usize> ByteArray for HeapArray<N> {
+    const LENGTH: usize = N;
+
     fn new_zero() -> Self {
         Self::new_with(0)
     }
 
     fn new_with(x: u8) -> Self {
-        let v = alloc::vec![x; C];
+        let v = alloc::vec![x; N];
         Self(v)
     }
 
     fn from_slice(s: &[u8]) -> Self {
-        let mut v = alloc::vec![0; C];
+        assert_eq!(s.len(), N);
+        let mut v = alloc::vec![0; N];
         v.as_mut_slice().copy_from_slice(s);
         Self(v)
-    }
-
-    fn len() -> usize {
-        C
     }
 
     fn as_slice(&self) -> &[u8] {
@@ -124,27 +130,26 @@ impl<const C: usize> ByteArray for HeapArray<C> {
     }
 }
 
-impl<const C: usize> ByteArray for ArrayVec<u8, C> {
+impl<const N: usize> ByteArray for ArrayVec<u8, N> {
+    const LENGTH: usize = N;
+
     fn new_zero() -> Self {
         Self::new_with(0)
     }
 
     fn new_with(x: u8) -> Self {
-        let mut a = ArrayVec::<u8, C>::new();
-        for _ in 0..C {
+        let mut a = ArrayVec::<u8, N>::new();
+        for _ in 0..N {
             a.push(x);
         }
         a
     }
 
     fn from_slice(s: &[u8]) -> Self {
+        assert_eq!(s.len(), N);
         let mut a = Self::new_zero();
         a.copy_from_slice(s);
         a
-    }
-
-    fn len() -> usize {
-        C
     }
 
     fn as_slice(&self) -> &[u8] {
@@ -156,49 +161,30 @@ impl<const C: usize> ByteArray for ArrayVec<u8, C> {
     }
 }
 
-macro_rules! impl_array {
-    ($array:ty, $w:literal) => {
-        impl $array for [u8; $w] {
-            fn new_zero() -> Self {
-                [0u8; $w]
-            }
-            fn new_with(x: u8) -> Self {
-                [x; $w]
-            }
-            fn from_slice(data: &[u8]) -> Self {
-                let mut a = [0u8; $w];
-                a.copy_from_slice(data);
-                a
-            }
-            fn len() -> usize {
-                $w
-            }
-            fn as_slice(&self) -> &[u8] {
-                self
-            }
-            fn as_mut(&mut self) -> &mut [u8] {
-                self
-            }
-        }
-    };
+/// Implement `ByteArray` for fixed-size `[u8; N]` arrays
+impl<const N: usize> ByteArray for [u8; N] {
+    const LENGTH: usize = N;
+
+    fn new_zero() -> Self {
+        [0u8; N]
+    }
+
+    fn new_with(x: u8) -> Self {
+        [x; N]
+    }
+
+    fn from_slice(data: &[u8]) -> Self {
+        assert_eq!(data.len(), N);
+        let mut a = [0u8; N];
+        a.copy_from_slice(data);
+        a
+    }
+
+    fn as_slice(&self) -> &[u8] {
+        self
+    }
+
+    fn as_mut(&mut self) -> &mut [u8] {
+        self
+    }
 }
-
-// Implement ByteArray for the most common array sizes
-impl_array!(ByteArray, 8);
-impl_array!(ByteArray, 16);
-impl_array!(ByteArray, 32);
-impl_array!(ByteArray, 64);
-impl_array!(ByteArray, 128);
-impl_array!(ByteArray, 256);
-impl_array!(ByteArray, 512);
-impl_array!(ByteArray, 1024);
-
-// These are for Kyber
-impl_array!(ByteArray, 768);
-impl_array!(ByteArray, 800);
-impl_array!(ByteArray, 1088);
-impl_array!(ByteArray, 1184);
-impl_array!(ByteArray, 1568);
-impl_array!(ByteArray, 1632);
-impl_array!(ByteArray, 2400);
-impl_array!(ByteArray, 3168);

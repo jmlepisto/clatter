@@ -3,6 +3,8 @@
 use displaydoc::Display;
 use thiserror_no_std::Error;
 
+use crate::handshakepattern::HandshakeType;
+
 /// Errors that can happen during handshake operations
 #[derive(Debug, Error, Display)]
 pub enum HandshakeError {
@@ -18,6 +20,8 @@ pub enum HandshakeError {
     ErrorState,
     /// Required PSKs were not supplied
     PskMissing,
+    /// Invalid handshake pattern: expected {0:?}, got {1:?}
+    InvalidPattern(HandshakeType, HandshakeType),
     /// KEM error: {0}
     Kem(#[from] KemError),
     /// DH error: {0}

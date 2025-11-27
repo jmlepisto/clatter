@@ -27,6 +27,7 @@ huge thanks to the developers for their effort!
 crypto primitives incorporated to provide additional security in case of a catastrophic flaw in the post-quantum algorithms.
 Clatter provides:
 
+  * [`HybridHandshake`](https://docs.rs/clatter/latest/clatter/struct.HybridHandshake.html) - *true hybrid* handshake which combines both DH and KEM operations in the same handshake messages.
   * [`HybridDualLayerHandshake`](https://docs.rs/clatter/latest/clatter/struct.HybridDualLayerHandshake.html) - *outer-encrypts-inner* style piped handshake with cryptographic binding between the layers.
   * [`DualLayerHandshake`](https://docs.rs/clatter/latest/clatter/struct.DualLayerHandshake.html) - *outer-encrypts-inner* style piped handshake with fully independent layers.
 
@@ -125,10 +126,50 @@ Noise_pqNN_Kyber512+Kyber1024_ChaChaPoly_BLAKE2s
 Noise_pqNN_MLKEM512+Kyber768_ChaChaPoly_BLAKE2s
 ```
 
-## Clatter dual layer handshakes
+## Clatter hybrid handshakes
 
-Clatter provides ready-made dual layer handshake types. Below is the formal specification of those handshake mechanisms while
+Clatter provides ready-made hybrid handshake types. Below is the formal specification of those handshake mechanisms while
 the [crate documentation](https://docs.rs/clatter/latest/clatter/) provides practical details.
+
+### [`HybridHandshake`](https://docs.rs/clatter/latest/clatter/struct.HybridHandshake.html)
+
+A *true hybrid* handshake which combines both DH and KEM operations. This handshake type accepts handshake patterns with
+both DH and KEM operations and mixes the results of both exchanges in a single *symmetric state* containing the session
+keys and hash, achieving true hybrid security against quantum threats while preserving the established safety guarantees
+of classic algorithms - all with minimal effect to the number of round trips per handshake!
+
+Clatter provides hybrid versions of the most commonly used Noise handshake patterns in the [`handshakepattern`](https://docs.rs/clatter/latest/clatter/handshakepattern/index.html)
+module. These hybrid pattern variables are named as `noise_hybrid_<pattern>_...` and are essentially combined versions of the respective
+NQ and PQ handshake patterns. Each handshake interaction will complete the operations of both the NQ and PQ patterns and the hybrid
+pattern is constructed in a way which preserves the relative ordering of `DH` and `KEM` operations with respect to key material transmissions.
+
+#### Tokens `e` and `s` handling
+
+Handshake pattern tokens `e` and `s` require special handling for sending/receiving both the DH and KEM public keys.
+Clatter will always place the public DH key first in the message buffer, followed by the public KEM key. All the related
+`mix_hash` and `mix_key` operations are also conducted in the same order.
+
+#### Hybrid protocol naming scheme
+
+If a hybrid handshake uses the same KEM for both ephemeral and static operations, the handshake name will have the following format:
+
+```text
+Noise_hybrid<pattern>_<DH>+<KEM>_<cipher>_<hash>
+```
+
+If, however, a different KEM is used for ephemeral and static operations, the resulting name will include both KEMs joined
+together with an additional `+` symbol - ephemeral KEM first:
+
+```text
+Noise_hybrid<pattern>_<DH>+<EKEM>+<SKEM>_<cipher>_<hash>
+```
+
+Examples:
+
+```text
+Noise_hybridNN_X25519+MLKEM512_ChaChaPoly_BLAKE2s
+Noise_hybridNN_X25519+MLKEM512+MLKEM1024_ChaChaPoly_BLAKE2s
+```
 
 ### [`HybridDualLayerHandshake`](https://docs.rs/clatter/latest/clatter/struct.HybridDualLayerHandshake.html)
 
