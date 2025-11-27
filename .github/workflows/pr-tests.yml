@@ -42,3 +42,15 @@ jobs:
 
       - name: Verify Minimum Supported Rust Version
         run: cargo msrv verify
+
+  audit:
+    name: Run cargo audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Audit
+        run: cargo audit
