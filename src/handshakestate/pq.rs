@@ -9,7 +9,7 @@ use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;
 use crate::constants::{MAX_PSKS, PSK_LEN};
 use crate::error::{HandshakeError, HandshakeResult};
-use crate::handshakepattern::{HandshakePattern, Token};
+use crate::handshakepattern::{HandshakePattern, HandshakeType, Token};
 use crate::handshakestate::HandshakeStatus;
 use crate::symmetricstate::SymmetricState;
 use crate::traits::{Cipher, Handshaker, HandshakerInternal, Hash, Kem, Rng};
@@ -62,8 +62,11 @@ where
     /// * `HASH` - Hashing algorithm to use
     /// * `RNG` - RNG to use
     ///
+    /// # Errors
+    /// * [`HandshakeError::InvalidPattern`] if initialized with a NQ pattern
+    ///
     /// # Panics
-    /// * Panics if initialized with a NQ pattern
+    /// * If the handshake pattern contains invalid pre-shared keys
     #[allow(clippy::too_many_arguments)] // Okay for now
     pub fn new(
         pattern: HandshakePattern,
@@ -75,7 +78,12 @@ where
         re: Option<EKEM::PubKey>,
     ) -> Result<PqHandshakeCore<EKEM, SKEM, CIPHER, HASH, RNG>, HandshakeError> {
         // Can't KEM without KEM, right
-        assert!(pattern.is_kem());
+        if pattern.get_type() != HandshakeType::KEM {
+            return Err(HandshakeError::InvalidPattern(
+                HandshakeType::KEM,
+                pattern.get_type(),
+            ));
+        }
 
         // Initialize symmetric state and mix in prologue
         let mut ss = SymmetricState::new(&Self::build_name(&pattern));

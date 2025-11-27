@@ -309,9 +309,9 @@ where
     H: Hash,
 {
     /// Ephemeral public key type
-    type E: ByteArray;
+    type E;
     /// Static public key type
-    type S: ByteArray;
+    type S;
 
     /// Write next handshake message to the given buffer
     ///

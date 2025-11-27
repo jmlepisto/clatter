@@ -20,6 +20,7 @@
 //!
 //! * [`NqHandshake`] - Classical, non-post-quantum Noise handshake
 //! * [`PqHandshake`] - Post-quantum Noise handshake
+//! * [`HybridHandshake`] - *true hybrid* handshake which combines both NQ and PQ security in the same handshake messages
 //! * [`HybridDualLayerHandshake`] - *outer-encrypts-inner* style piped handshake with cryptographic binding between the layers
 //! * [`DualLayerHandshake`] - *outer-encrypts-inner* style piped handshake with fully independent layers
 //!
@@ -41,6 +42,10 @@
 //!
 //! Selected fundamental Noise and PQNoise patterns are available pre-made in the [`handshakepattern`] module.
 //! Utilities in that module can also be used to craft additional handshake patterns.
+//!
+//! Pre-made hybrid patterns for the [`HybridHandshake`] type are also available. These patterns are constructed
+//! by combining the classic Noise NQ patterns with PQNoise patterns in a way which preserves the relative ordering
+//! of `DH`, `KEM` and key transmission operations.
 //!
 //! ## Crypto Vendors
 //!
@@ -151,9 +156,9 @@
 //! found in the [`getrandom`] crate documentation.
 //!
 //! If you do not add `getrandom` support, Clatter can still be used. In this case you
-//! are restricted to the lower-level [`NqHandshakeCore`] and [`PqHandshakeCore`] types and
-//! must implement your own custom RNG provides that implements the traits defined by
-//! [`crate::traits::Rng`].
+//! are restricted to the lower-level handshake core types, such as [`NqHandshakeCore`]
+//! and [`PqHandshakeCore`] and must implement your own custom RNG provides that implements
+//! the traits defined by [`crate::traits::Rng`].
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -170,6 +175,7 @@ pub mod traits;
 pub mod transportstate;
 
 pub use handshakestate::dual_layer::DualLayerHandshake;
+pub use handshakestate::hybrid::{HybridHandshakeCore, HybridHandshakeParams};
 pub use handshakestate::hybrid_dual_layer::HybridDualLayerHandshake;
 pub use handshakestate::nq::NqHandshakeCore;
 pub use handshakestate::pq::PqHandshakeCore;
@@ -177,7 +183,10 @@ pub use rand_core;
 pub use traits::Handshaker;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 #[cfg(feature = "getrandom")]
-pub use {handshakestate::nq::NqHandshake, handshakestate::pq::PqHandshake};
+pub use {
+    handshakestate::hybrid::HybridHandshake, handshakestate::nq::NqHandshake,
+    handshakestate::pq::PqHandshake,
+};
 
 /// Concrete crypto implementations
 pub mod crypto {
@@ -234,4 +243,11 @@ pub struct KeyPair<P: Zeroize, S: Zeroize> {
     pub public: P,
     /// Secret (private) key
     pub secret: S,
+}
+
+impl<P: Zeroize, S: Zeroize> KeyPair<P, S> {
+    /// Initialize a keypair
+    pub fn new(public: P, secret: S) -> KeyPair<P, S> {
+        Self { public, secret }
+    }
 }

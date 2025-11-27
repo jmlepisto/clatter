@@ -11,6 +11,7 @@ use crate::traits::{Cipher, Hash, Rng};
 use crate::KeyPair;
 
 pub mod dual_layer;
+pub mod hybrid;
 pub mod hybrid_dual_layer;
 pub mod nq;
 pub mod pq;
