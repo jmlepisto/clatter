@@ -1,6 +1,6 @@
 [package]
 name = "clatter"
-version = "2.1.0"
+version = "2.1.0-rc.1"
 edition = "2021"
 rust-version = "1.81.0"
 license = "MIT"
