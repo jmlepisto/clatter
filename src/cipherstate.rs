@@ -68,7 +68,7 @@ impl<C: Cipher> CipherState<C> {
             return Err(CipherError::NonceOverflow);
         }
 
-        C::encrypt(&self.k, self.n, ad, plaintext, out);
+        C::encrypt(&self.k, self.n, ad, plaintext, out)?;
         self.nonce_inc_check();
 
         Ok(())
@@ -87,8 +87,7 @@ impl<C: Cipher> CipherState<C> {
 
         let size = C::encrypt_in_place(&self.k, self.n, ad, in_out, plaintext_len);
         self.nonce_inc_check();
-
-        Ok(size)
+        size
     }
 
     /// AEAD decryption
@@ -149,8 +148,9 @@ impl<C: Cipher> CipherState<C> {
     /// Rekey
     ///
     /// Rekeys as per Noise spec parts 4.2 and 11.3
-    pub fn rekey(&mut self) {
-        self.k = C::rekey(&self.k)
+    pub fn rekey(&mut self) -> CipherResult<()> {
+        self.k = C::rekey(&self.k)?;
+        Ok(())
     }
 }
 
@@ -221,7 +221,7 @@ mod tests {
         assert_eq!(*msg, c2_buf[..msg.len()]);
 
         // Rekey responder
-        c2.rekey();
+        c2.rekey().unwrap();
         c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
             .unwrap();
         assert!(c2
@@ -233,7 +233,7 @@ mod tests {
             .is_err());
 
         // Rekey sender (and restore nonce...)
-        c1.rekey();
+        c1.rekey().unwrap();
         c2.set_nonce(c1.get_nonce());
         c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
             .unwrap();
@@ -243,8 +243,8 @@ mod tests {
 
         // Rekey a lot
         for _ in 0..10000 {
-            c1.rekey();
-            c2.rekey();
+            c1.rekey().unwrap();
+            c2.rekey().unwrap();
         }
         c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
             .unwrap();

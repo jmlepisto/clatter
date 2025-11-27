@@ -322,21 +322,25 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
     }
 
     /// Rekey outbound cipher
-    pub fn rekey_sender(&mut self) {
+    pub fn rekey_sender(&mut self) -> TransportResult<()> {
         if self.initiator {
-            self.cipherstates.initiator_to_responder.rekey();
+            self.cipherstates.initiator_to_responder.rekey()?;
         } else {
-            self.cipherstates.responder_to_initiator.rekey();
+            self.cipherstates.responder_to_initiator.rekey()?;
         }
+
+        Ok(())
     }
 
     /// Rekey inbound cipher
-    pub fn rekey_receiver(&mut self) {
+    pub fn rekey_receiver(&mut self) -> TransportResult<()> {
         if self.initiator {
-            self.cipherstates.responder_to_initiator.rekey();
+            self.cipherstates.responder_to_initiator.rekey()?;
         } else {
-            self.cipherstates.initiator_to_responder.rekey();
+            self.cipherstates.initiator_to_responder.rekey()?;
         }
+
+        Ok(())
     }
 
     /// Take ownership of internal cipherstates

@@ -3,7 +3,7 @@ use core::ops::Deref;
 use chacha20poly1305::{AeadInPlace, ChaCha20Poly1305, KeyInit};
 
 use crate::bytearray::SensitiveByteArray;
-use crate::error::CipherError;
+use crate::error::{CipherError, CipherResult};
 use crate::traits::{Cipher, CryptoComponent};
 
 /// ChaCha20-Poly1305 cipher implementation
@@ -19,10 +19,17 @@ impl CryptoComponent for ChaChaPoly {
 impl Cipher for ChaChaPoly {
     type Key = SensitiveByteArray<[u8; 32]>;
 
-    fn encrypt(k: &Self::Key, nonce: u64, ad: &[u8], plaintext: &[u8], out: &mut [u8]) {
+    fn encrypt(
+        k: &Self::Key,
+        nonce: u64,
+        ad: &[u8],
+        plaintext: &[u8],
+        out: &mut [u8],
+    ) -> CipherResult<()> {
         assert!(plaintext.len().checked_add(Self::tag_len()) == Some(out.len()));
         out[..plaintext.len()].copy_from_slice(plaintext);
-        Self::encrypt_in_place(k, nonce, ad, out, plaintext.len());
+        Self::encrypt_in_place(k, nonce, ad, out, plaintext.len())?;
+        Ok(())
     }
 
     fn encrypt_in_place(
@@ -31,7 +38,7 @@ impl Cipher for ChaChaPoly {
         ad: &[u8],
         in_out: &mut [u8],
         plaintext_len: usize,
-    ) -> usize {
+    ) -> CipherResult<usize> {
         assert!(plaintext_len
             .checked_add(Self::tag_len())
             .is_some_and(|len| len <= in_out.len()));
@@ -44,10 +51,10 @@ impl Cipher for ChaChaPoly {
 
         let tag = ChaCha20Poly1305::new(k.deref().into())
             .encrypt_in_place_detached(&full_nonce.into(), ad, buffer)
-            .unwrap();
+            .map_err(|_| CipherError::Encrypt)?;
 
         tag_out.copy_from_slice(&tag);
-        out_len
+        Ok(out_len)
     }
 
     fn decrypt(
@@ -56,7 +63,7 @@ impl Cipher for ChaChaPoly {
         ad: &[u8],
         ciphertext: &[u8],
         out: &mut [u8],
-    ) -> crate::error::CipherResult<()> {
+    ) -> CipherResult<()> {
         assert!(ciphertext.len().checked_sub(Self::tag_len()) == Some(out.len()));
 
         let mut full_nonce = [0u8; 12];
@@ -78,7 +85,7 @@ impl Cipher for ChaChaPoly {
         ad: &[u8],
         in_out: &mut [u8],
         ciphertext_len: usize,
-    ) -> crate::error::CipherResult<usize> {
+    ) -> CipherResult<usize> {
         assert!(ciphertext_len <= in_out.len());
         assert!(ciphertext_len >= Self::tag_len());
 

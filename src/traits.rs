@@ -191,7 +191,13 @@ pub trait Cipher: CryptoComponent {
     /// # Panics
     ///
     /// If `out.len()` < `plaintext.len()` + `Self::tag_len()`
-    fn encrypt(k: &Self::Key, nonce: u64, ad: &[u8], plaintext: &[u8], out: &mut [u8]);
+    fn encrypt(
+        k: &Self::Key,
+        nonce: u64,
+        ad: &[u8],
+        plaintext: &[u8],
+        out: &mut [u8],
+    ) -> CipherResult<()>;
 
     /// In-place AEAD encrypt
     ///
@@ -207,7 +213,7 @@ pub trait Cipher: CryptoComponent {
         ad: &[u8],
         in_out: &mut [u8],
         plaintext_len: usize,
-    ) -> usize;
+    ) -> CipherResult<usize>;
 
     /// AEAD decrypt
     ///
@@ -242,7 +248,7 @@ pub trait Cipher: CryptoComponent {
     ) -> CipherResult<usize>;
 
     /// Rekey according to noise spec part 4.2
-    fn rekey(k: &Self::Key) -> Self::Key {
+    fn rekey(k: &Self::Key) -> CipherResult<Self::Key> {
         let mut k_new = [0u8; MAX_KEY_LEN + MAX_TAG_LEN];
         let plaintext = [0u8; MAX_KEY_LEN];
         Self::encrypt(
@@ -251,11 +257,10 @@ pub trait Cipher: CryptoComponent {
             &[],
             &plaintext[..Self::key_len()],
             &mut k_new[..Self::key_len() + Self::tag_len()],
-        );
+        )?;
         let k_out = Self::Key::from_slice(&k_new[..Self::key_len()]);
         k_new.zeroize();
-
-        k_out
+        Ok(k_out)
     }
 }
 
