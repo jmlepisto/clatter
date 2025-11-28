@@ -84,6 +84,8 @@ pub enum CipherError {
     NonceOverflow,
     /// Decrypt error
     Decrypt,
+    /// Encrypt error
+    Encrypt,
 }
 
 /// Cipher operation result type
