@@ -9,7 +9,7 @@ with support for [**Post Quantum (PQ) extensions**](https://doi.org/10.1145/3548
 Yawning Angel, Benjamin Dowling, Andreas Hülsing, Peter Schwabe, and Fiona Johanna Weber.
 
 Main targets of this crate are **correctness**, extensibility, and strict `no_std` compatibility
-and those come  with the small drawback of more verbose user experience with some boilerplate.
+and those come with the small drawback of more verbose user experience with some boilerplate.
 If you don't need PQ functionality and are developing for a regular target, you probably are better
 off using these instead:
 
@@ -106,7 +106,7 @@ Thus Clatter proposes and uses the following naming scheme:
 | ML-KEM-768    | `MLKEM768`    |
 | ML-KEM-1024   | `MLKEM1024`   |
 
-Clatter also includes the possibility to pick different KEMs for ehpemeral and static operations. If the
+Clatter also includes the possibility to pick different KEMs for ephemeral and static operations. If the
 same KEM is used for both, the name of the KEM is simply placed in the protocol name in place of the DH algorithm.
 
 Examples:
@@ -195,7 +195,7 @@ the final transport keys only derive entropy from the inner handshake.
 
 ## Verification
 
-Caltter is verified by:
+Clatter is verified by:
 
 * Unit tests
 * [Smoke tests](tests/)

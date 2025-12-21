@@ -7,6 +7,10 @@ edition = "2021"
 [package.metadata]
 cargo-fuzz = true
 
+[lib]
+name = "clatter_fuzz"
+path = "src/lib.rs"
+
 [dependencies]
 libfuzzer-sys = "0.4"
 rand = "0.8.5"
@@ -52,6 +56,27 @@ bench = false
 [[bin]]
 name = "pq_transport"
 path = "fuzz_targets/pq_transport.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "hybrid_handshake_read"
+path = "fuzz_targets/hybrid_handshake_read.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "hybrid_handshake_payload"
+path = "fuzz_targets/hybrid_handshake_payload.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "hybrid_transport"
+path = "fuzz_targets/hybrid_transport.rs"
 test = false
 doc = false
 bench = false

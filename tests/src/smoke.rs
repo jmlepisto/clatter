@@ -9,50 +9,15 @@ use clatter::{
     HybridHandshakeParams, NqHandshake, PqHandshake,
 };
 
-use crate::verify_handshake;
+use crate::{
+    hybrid_handshake_patterns, nq_handshake_patterns, pq_handshake_patterns, verify_handshake,
+};
 
 const PSKS: &[[u8; 32]] = &[[0; 32], [1; 32], [2; 32], [3; 32]];
 
 #[test]
 fn smoke_nq_handshakes() {
-    let handshakes = [
-        noise_n(),
-        noise_k(),
-        noise_x(),
-        noise_ik(),
-        noise_in(),
-        noise_ix(),
-        noise_kk(),
-        noise_kn(),
-        noise_kx(),
-        noise_nk(),
-        noise_nn(),
-        noise_nx(),
-        noise_xk(),
-        noise_xn(),
-        noise_xx(),
-        noise_n_psk0(),
-        noise_k_psk0(),
-        noise_x_psk1(),
-        noise_ik_psk1(),
-        noise_ik_psk2(),
-        noise_in_psk1(),
-        noise_in_psk2(),
-        noise_ix_psk2(),
-        noise_kk_psk0(),
-        noise_kk_psk2(),
-        noise_kn_psk0(),
-        noise_kn_psk2(),
-        noise_kx_psk2(),
-        noise_nk_psk0(),
-        noise_nk_psk2(),
-        noise_nn_psk0(),
-        noise_nn_psk2(),
-        noise_nx_psk2(),
-        noise_xk_psk3(),
-        noise_xn_psk3(),
-        noise_xx_psk3(),
-    ];
+    let handshakes = nq_handshake_patterns();
 
     for pattern in handshakes {
         nq_handshake::<X25519, ChaChaPoly, Sha512>(pattern.clone());
@@ -69,38 +34,7 @@ fn smoke_nq_handshakes() {
 
 #[test]
 fn smoke_pq_handshakes() {
-    let handshakes = [
-        noise_pqik(),
-        noise_pqin(),
-        noise_pqix(),
-        noise_pqkk(),
-        noise_pqkn(),
-        noise_pqkx(),
-        noise_pqnk(),
-        noise_pqnn(),
-        noise_pqnx(),
-        noise_pqxk(),
-        noise_pqxn(),
-        noise_pqxx(),
-        noise_pqik_psk1(),
-        noise_pqik_psk2(),
-        noise_pqin_psk1(),
-        noise_pqin_psk2(),
-        noise_pqix_psk2(),
-        noise_pqkk_psk0(),
-        noise_pqkk_psk2(),
-        noise_pqkn_psk0(),
-        noise_pqkn_psk2(),
-        noise_pqkx_psk2(),
-        noise_pqnk_psk0(),
-        noise_pqnk_psk2(),
-        noise_pqnn_psk0(),
-        noise_pqnn_psk2(),
-        noise_pqnx_psk2(),
-        noise_pqxk_psk3(),
-        noise_pqxn_psk3(),
-        noise_pqxx_psk3(),
-    ];
+    let handshakes = pq_handshake_patterns();
 
     fn cipher_hash_combos<EKEM: Kem, SKEM: Kem>(pattern: HandshakePattern) {
         pq_handshake::<EKEM, SKEM, ChaChaPoly, Blake2b>(pattern.clone());
@@ -140,38 +74,7 @@ fn smoke_pq_handshakes() {
 
 #[test]
 fn smoke_hybrid_handshakes() {
-    let handshakes = [
-        noise_hybrid_ik(),
-        noise_hybrid_in(),
-        noise_hybrid_ix(),
-        noise_hybrid_kk(),
-        noise_hybrid_kn(),
-        noise_hybrid_kx(),
-        noise_hybrid_nk(),
-        noise_hybrid_nn(),
-        noise_hybrid_nx(),
-        noise_hybrid_xk(),
-        noise_hybrid_xn(),
-        noise_hybrid_xx(),
-        noise_hybrid_ik_psk1(),
-        noise_hybrid_ik_psk2(),
-        noise_hybrid_in_psk1(),
-        noise_hybrid_in_psk2(),
-        noise_hybrid_ix_psk2(),
-        noise_hybrid_kk_psk0(),
-        noise_hybrid_kk_psk2(),
-        noise_hybrid_kn_psk0(),
-        noise_hybrid_kn_psk2(),
-        noise_hybrid_kx_psk2(),
-        noise_hybrid_nk_psk0(),
-        noise_hybrid_nk_psk2(),
-        noise_hybrid_nn_psk0(),
-        noise_hybrid_nn_psk2(),
-        noise_hybrid_nx_psk2(),
-        noise_hybrid_xk_psk3(),
-        noise_hybrid_xn_psk3(),
-        noise_hybrid_xx_psk3(),
-    ];
+    let handshakes = hybrid_handshake_patterns();
 
     fn cipher_hash_combos<DH: Dh, EKEM: Kem, SKEM: Kem>(pattern: HandshakePattern) {
         hybrid_handshake::<DH, EKEM, SKEM, ChaChaPoly, Blake2b>(pattern.clone());
@@ -217,77 +120,8 @@ fn smoke_hybrid_handshakes() {
 
 #[test]
 fn smoke_dual_layer_handshakes() {
-    let nq_handshakes = [
-        noise_n(),
-        noise_k(),
-        noise_x(),
-        noise_ik(),
-        noise_in(),
-        noise_ix(),
-        noise_kk(),
-        noise_kn(),
-        noise_kx(),
-        noise_nk(),
-        noise_nn(),
-        noise_nx(),
-        noise_xk(),
-        noise_xn(),
-        noise_xx(),
-        noise_n_psk0(),
-        noise_k_psk0(),
-        noise_x_psk1(),
-        noise_ik_psk1(),
-        noise_ik_psk2(),
-        noise_in_psk1(),
-        noise_in_psk2(),
-        noise_ix_psk2(),
-        noise_kk_psk0(),
-        noise_kk_psk2(),
-        noise_kn_psk0(),
-        noise_kn_psk2(),
-        noise_kx_psk2(),
-        noise_nk_psk0(),
-        noise_nk_psk2(),
-        noise_nn_psk0(),
-        noise_nn_psk2(),
-        noise_nx_psk2(),
-        noise_xk_psk3(),
-        noise_xn_psk3(),
-        noise_xx_psk3(),
-    ];
-
-    let pq_handshakes = [
-        noise_pqik(),
-        noise_pqin(),
-        noise_pqix(),
-        noise_pqkk(),
-        noise_pqkn(),
-        noise_pqkx(),
-        noise_pqnk(),
-        noise_pqnn(),
-        noise_pqnx(),
-        noise_pqxk(),
-        noise_pqxn(),
-        noise_pqxx(),
-        noise_pqik_psk1(),
-        noise_pqik_psk2(),
-        noise_pqin_psk1(),
-        noise_pqin_psk2(),
-        noise_pqix_psk2(),
-        noise_pqkk_psk0(),
-        noise_pqkk_psk2(),
-        noise_pqkn_psk0(),
-        noise_pqkn_psk2(),
-        noise_pqkx_psk2(),
-        noise_pqnk_psk0(),
-        noise_pqnk_psk2(),
-        noise_pqnn_psk0(),
-        noise_pqnn_psk2(),
-        noise_pqnx_psk2(),
-        noise_pqxk_psk3(),
-        noise_pqxn_psk3(),
-        noise_pqxx_psk3(),
-    ];
+    let nq_handshakes = nq_handshake_patterns();
+    let pq_handshakes = pq_handshake_patterns();
 
     fn cipher_hash_combos<EKEM: Kem, SKEM: Kem, DH: Dh>(
         nq_pattern: HandshakePattern,

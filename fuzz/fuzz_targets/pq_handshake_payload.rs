@@ -5,9 +5,8 @@ use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
 use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
 use clatter::crypto::kem::pqclean_ml_kem::MlKem1024;
 use clatter::crypto::kem::rust_crypto_ml_kem::MlKem512;
-use clatter::handshakepattern::*;
-use clatter::traits::{Cipher, Hash, Kem};
-use clatter::{Handshaker, PqHandshake};
+use clatter::traits::{Cipher, Hash, Handshaker, Kem};
+use clatter_fuzz::{pq_handshake_patterns, setup_pq_handshake};
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|data: &[u8]| {
@@ -23,60 +22,12 @@ fuzz_target!(|data: &[u8]| {
 });
 
 fn verify_with<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(data: &[u8]) {
-    let handshakes = [
-        noise_pqik(),
-        noise_pqin(),
-        noise_pqix(),
-        noise_pqkk(),
-        noise_pqkn(),
-        noise_pqkx(),
-        noise_pqnk(),
-        noise_pqnn(),
-        noise_pqnx(),
-        noise_pqxk(),
-        noise_pqxn(),
-        noise_pqxx(),
-        noise_pqik_psk1(),
-        noise_pqik_psk2(),
-        noise_pqin_psk1(),
-        noise_pqin_psk2(),
-        noise_pqix_psk2(),
-        noise_pqkk_psk0(),
-        noise_pqkk_psk2(),
-        noise_pqkn_psk0(),
-        noise_pqkn_psk2(),
-        noise_pqkx_psk2(),
-        noise_pqnk_psk0(),
-        noise_pqnk_psk2(),
-        noise_pqnn_psk0(),
-        noise_pqnn_psk2(),
-        noise_pqnx_psk2(),
-        noise_pqxk_psk3(),
-        noise_pqxn_psk3(),
-        noise_pqxx_psk3(),
-    ];
-
-    const PSK: &[u8] = b"Trapped inside this Octavarium!!";
+    let handshakes = pq_handshake_patterns();
 
     for pattern in handshakes {
         let mut alice_buf = [0u8; MAX_MESSAGE_LEN];
 
-        let alice_key = SKEM::genkey().unwrap();
-        let bob_key = SKEM::genkey().unwrap();
-        let bob_pub = bob_key.public.clone();
-
-        let mut alice = PqHandshake::<EKEM, SKEM, C, H>::new(
-            pattern.clone(),
-            &[],
-            true,
-            Some(alice_key),
-            None,
-            Some(bob_pub),
-            None,
-        )
-        .unwrap();
-
-        alice.push_psk(PSK);
+        let (mut alice, _) = setup_pq_handshake::<EKEM, SKEM, C, H>(&pattern);
 
         // Alice writes fuzzed payload
         let _ = alice.write_message(data, &mut alice_buf);

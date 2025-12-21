@@ -7,9 +7,14 @@ use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
 use clatter::crypto::kem::{pqclean_ml_kem, rust_crypto_ml_kem};
 use clatter::handshakepattern::*;
 use clatter::traits::{Cipher, Dh, Hash, Kem};
-use clatter::{rand_core, DualLayerHandshake, Handshaker, NqHandshakeCore, PqHandshakeCore};
+use clatter::{
+    rand_core, DualLayerHandshake, Handshaker, HybridHandshakeCore, HybridHandshakeParams,
+    NqHandshakeCore, PqHandshakeCore,
+};
 
-use crate::verify_handshake;
+use crate::{
+    hybrid_handshake_patterns, nq_handshake_patterns, pq_handshake_patterns, verify_handshake,
+};
 
 const PSKS: &[[u8; 32]] = &[[0; 32], [1; 32], [2; 32], [3; 32]];
 
@@ -45,44 +50,7 @@ impl rand_core::CryptoRng for DummyRng {}
 
 #[test]
 fn no_getrandom_smoke_nq_handshakes() {
-    let handshakes = [
-        noise_n(),
-        noise_k(),
-        noise_x(),
-        noise_ik(),
-        noise_in(),
-        noise_ix(),
-        noise_kk(),
-        noise_kn(),
-        noise_kx(),
-        noise_nk(),
-        noise_nn(),
-        noise_nx(),
-        noise_xk(),
-        noise_xn(),
-        noise_xx(),
-        noise_n_psk0(),
-        noise_k_psk0(),
-        noise_x_psk1(),
-        noise_ik_psk1(),
-        noise_ik_psk2(),
-        noise_in_psk1(),
-        noise_in_psk2(),
-        noise_ix_psk2(),
-        noise_kk_psk0(),
-        noise_kk_psk2(),
-        noise_kn_psk0(),
-        noise_kn_psk2(),
-        noise_kx_psk2(),
-        noise_nk_psk0(),
-        noise_nk_psk2(),
-        noise_nn_psk0(),
-        noise_nn_psk2(),
-        noise_nx_psk2(),
-        noise_xk_psk3(),
-        noise_xn_psk3(),
-        noise_xx_psk3(),
-    ];
+    let handshakes = nq_handshake_patterns();
 
     for pattern in handshakes {
         no_getrandom_nq_handshake::<X25519, ChaChaPoly, Sha512>(pattern.clone());
@@ -99,38 +67,7 @@ fn no_getrandom_smoke_nq_handshakes() {
 
 #[test]
 fn no_getrandom_smoke_pq_handshakes() {
-    let handshakes = [
-        noise_pqik(),
-        noise_pqin(),
-        noise_pqix(),
-        noise_pqkk(),
-        noise_pqkn(),
-        noise_pqkx(),
-        noise_pqnk(),
-        noise_pqnn(),
-        noise_pqnx(),
-        noise_pqxk(),
-        noise_pqxn(),
-        noise_pqxx(),
-        noise_pqik_psk1(),
-        noise_pqik_psk2(),
-        noise_pqin_psk1(),
-        noise_pqin_psk2(),
-        noise_pqix_psk2(),
-        noise_pqkk_psk0(),
-        noise_pqkk_psk2(),
-        noise_pqkn_psk0(),
-        noise_pqkn_psk2(),
-        noise_pqkx_psk2(),
-        noise_pqnk_psk0(),
-        noise_pqnk_psk2(),
-        noise_pqnn_psk0(),
-        noise_pqnn_psk2(),
-        noise_pqnx_psk2(),
-        noise_pqxk_psk3(),
-        noise_pqxn_psk3(),
-        noise_pqxx_psk3(),
-    ];
+    let handshakes = pq_handshake_patterns();
 
     fn cipher_hash_combos<EKEM: Kem, SKEM: Kem>(pattern: HandshakePattern) {
         no_getrandom_pq_handshake::<EKEM, SKEM, ChaChaPoly, Blake2b>(pattern.clone());
@@ -169,78 +106,55 @@ fn no_getrandom_smoke_pq_handshakes() {
 }
 
 #[test]
-fn no_getrandom_smoke_dual_layer_handshakes() {
-    let nq_handshakes = [
-        noise_n(),
-        noise_k(),
-        noise_x(),
-        noise_ik(),
-        noise_in(),
-        noise_ix(),
-        noise_kk(),
-        noise_kn(),
-        noise_kx(),
-        noise_nk(),
-        noise_nn(),
-        noise_nx(),
-        noise_xk(),
-        noise_xn(),
-        noise_xx(),
-        noise_n_psk0(),
-        noise_k_psk0(),
-        noise_x_psk1(),
-        noise_ik_psk1(),
-        noise_ik_psk2(),
-        noise_in_psk1(),
-        noise_in_psk2(),
-        noise_ix_psk2(),
-        noise_kk_psk0(),
-        noise_kk_psk2(),
-        noise_kn_psk0(),
-        noise_kn_psk2(),
-        noise_kx_psk2(),
-        noise_nk_psk0(),
-        noise_nk_psk2(),
-        noise_nn_psk0(),
-        noise_nn_psk2(),
-        noise_nx_psk2(),
-        noise_xk_psk3(),
-        noise_xn_psk3(),
-        noise_xx_psk3(),
-    ];
+fn no_getrandom_smoke_hybrid_handshakes() {
+    let handshakes = hybrid_handshake_patterns();
 
-    let pq_handshakes = [
-        noise_pqik(),
-        noise_pqin(),
-        noise_pqix(),
-        noise_pqkk(),
-        noise_pqkn(),
-        noise_pqkx(),
-        noise_pqnk(),
-        noise_pqnn(),
-        noise_pqnx(),
-        noise_pqxk(),
-        noise_pqxn(),
-        noise_pqxx(),
-        noise_pqik_psk1(),
-        noise_pqik_psk2(),
-        noise_pqin_psk1(),
-        noise_pqin_psk2(),
-        noise_pqix_psk2(),
-        noise_pqkk_psk0(),
-        noise_pqkk_psk2(),
-        noise_pqkn_psk0(),
-        noise_pqkn_psk2(),
-        noise_pqkx_psk2(),
-        noise_pqnk_psk0(),
-        noise_pqnk_psk2(),
-        noise_pqnn_psk0(),
-        noise_pqnn_psk2(),
-        noise_pqnx_psk2(),
-        noise_pqxk_psk3(),
-        noise_pqxn_psk3(),
-        noise_pqxx_psk3(),
-    ];
+    fn cipher_hash_combos<DH: Dh, EKEM: Kem, SKEM: Kem>(pattern: HandshakePattern) {
+        no_getrandom_hybrid_handshake::<DH, EKEM, SKEM, ChaChaPoly, Blake2b>(pattern.clone());
+        no_getrandom_hybrid_handshake::<DH, EKEM, SKEM, ChaChaPoly, Blake2s>(pattern.clone());
+        no_getrandom_hybrid_handshake::<DH, EKEM, SKEM, ChaChaPoly, Sha256>(pattern.clone());
+        no_getrandom_hybrid_handshake::<DH, EKEM, SKEM, ChaChaPoly, Sha512>(pattern.clone());
+
+        no_getrandom_hybrid_handshake::<DH, EKEM, SKEM, AesGcm, Blake2b>(pattern.clone());
+        no_getrandom_hybrid_handshake::<DH, EKEM, SKEM, AesGcm, Blake2s>(pattern.clone());
+        no_getrandom_hybrid_handshake::<DH, EKEM, SKEM, AesGcm, Sha256>(pattern.clone());
+        no_getrandom_hybrid_handshake::<DH, EKEM, SKEM, AesGcm, Sha512>(pattern.clone());
+    }
+
+    for pattern in handshakes {
+        // Rust crypto
+        cipher_hash_combos::<X25519, rust_crypto_ml_kem::MlKem512, rust_crypto_ml_kem::MlKem512>(
+            pattern.clone(),
+        );
+        cipher_hash_combos::<X25519, rust_crypto_ml_kem::MlKem768, rust_crypto_ml_kem::MlKem768>(
+            pattern.clone(),
+        );
+        cipher_hash_combos::<X25519, rust_crypto_ml_kem::MlKem1024, rust_crypto_ml_kem::MlKem1024>(
+            pattern.clone(),
+        );
+
+        // PQCLean
+        cipher_hash_combos::<X25519, pqclean_ml_kem::MlKem512, pqclean_ml_kem::MlKem512>(
+            pattern.clone(),
+        );
+        cipher_hash_combos::<X25519, pqclean_ml_kem::MlKem768, pqclean_ml_kem::MlKem768>(
+            pattern.clone(),
+        );
+        cipher_hash_combos::<X25519, pqclean_ml_kem::MlKem1024, pqclean_ml_kem::MlKem1024>(
+            pattern.clone(),
+        );
+
+        // One cross-use test just in case with two different KEM vendors
+        cipher_hash_combos::<X25519, pqclean_ml_kem::MlKem768, rust_crypto_ml_kem::MlKem768>(
+            pattern.clone(),
+        );
+    }
+}
+
+#[test]
+fn no_getrandom_smoke_dual_layer_handshakes() {
+    let nq_handshakes = nq_handshake_patterns();
+    let pq_handshakes = pq_handshake_patterns();
 
     fn cipher_hash_combos<EKEM: Kem, SKEM: Kem, DH: Dh>(
         nq_pattern: HandshakePattern,
@@ -473,6 +387,48 @@ fn no_getrandom_pq_handshake<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(pattern: 
         None,
     )
     .unwrap();
+
+    // Push PSKs every time. No harm done if the pattern doesn't use those.
+    for psk in PSKS {
+        alice.push_psk(psk);
+        bob.push_psk(psk);
+    }
+
+    verify_handshake(alice, bob);
+}
+
+fn no_getrandom_hybrid_handshake<DH: Dh, EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(
+    pattern: HandshakePattern,
+) {
+    // Generate static keys
+    let alice_dh_keys = DH::genkey_rng(&mut DummyRng).unwrap();
+    let alice_dh_pub = alice_dh_keys.public.clone();
+    let bob_dh_keys = DH::genkey_rng(&mut DummyRng).unwrap();
+    let bob_dh_pub = bob_dh_keys.public.clone();
+
+    let alice_kem_keys = SKEM::genkey_rng(&mut DummyRng).unwrap();
+    let alice_kem_pub = alice_kem_keys.public.clone();
+    let bob_kem_keys = SKEM::genkey_rng(&mut DummyRng).unwrap();
+    let bob_kem_pub = bob_kem_keys.public.clone();
+
+    let alice_params = HybridHandshakeParams::new(pattern.clone(), true)
+        .with_prologue(b"Stumbling all around")
+        .with_s(alice_dh_keys)
+        .with_rs(bob_dh_pub)
+        .with_s_kem(alice_kem_keys)
+        .with_rs_kem(bob_kem_pub);
+
+    let mut alice =
+        HybridHandshakeCore::<DH, EKEM, SKEM, C, H, DummyRng>::new(alice_params).unwrap();
+
+    let bob_params = HybridHandshakeParams::new(pattern.clone(), false)
+        .with_prologue(b"Stumbling all around")
+        .with_s(bob_dh_keys)
+        .with_rs(alice_dh_pub)
+        .with_s_kem(bob_kem_keys)
+        .with_rs_kem(alice_kem_pub);
+
+    let mut bob = HybridHandshakeCore::<DH, EKEM, SKEM, C, H, DummyRng>::new(bob_params).unwrap();
 
     // Push PSKs every time. No harm done if the pattern doesn't use those.
     for psk in PSKS {

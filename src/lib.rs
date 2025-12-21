@@ -75,7 +75,7 @@
 //!
 //! ## Example
 //!
-//! Simplified example with the most straightforward (and unsecure) PQ handshake pattern and
+//! Simplified example with the most straightforward (and insecure) PQ handshake pattern and
 //! no handshake payload data at all:
 //!
 //! ```rust
@@ -157,7 +157,7 @@
 //!
 //! If you do not add `getrandom` support, Clatter can still be used. In this case you
 //! are restricted to the lower-level handshake core types, such as [`NqHandshakeCore`]
-//! and [`PqHandshakeCore`] and must implement your own custom RNG provides that implements
+//! and [`PqHandshakeCore`] and must implement your own custom RNG provider that implements
 //! the traits defined by [`crate::traits::Rng`].
 
 #[cfg(feature = "alloc")]
