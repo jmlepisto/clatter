@@ -42,7 +42,7 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
 
         Ok(TransportState {
             pattern: hs.get_pattern(),
-            cipherstates: hs.get_ciphers(),
+            cipherstates: hs.get_ciphers()?,
             h: hs.get_hash(),
             initiator: hs.is_initiator(),
         })

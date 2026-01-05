@@ -131,7 +131,7 @@ Noise_pqNN_MLKEM512+Kyber768_ChaChaPoly_BLAKE2s
 Clatter provides ready-made hybrid handshake types. Below is the formal specification of those handshake mechanisms while
 the [crate documentation](https://docs.rs/clatter/latest/clatter/) provides practical details.
 
-### [`HybridHandshake`](https://docs.rs/clatter/latest/clatter/struct.HybridHandshake.html)
+### [`HybridHandshake`](https://docs.rs/clatter/latest/clatter/type.HybridHandshake.html)
 
 A *true hybrid* handshake which combines both DH and KEM operations. This handshake type accepts handshake patterns with
 both DH and KEM operations and mixes the results of both exchanges in a single *symmetric state* containing the session

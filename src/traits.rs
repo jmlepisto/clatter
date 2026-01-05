@@ -10,6 +10,7 @@ use crate::constants::{MAX_KEY_LEN, MAX_MESSAGE_LEN, MAX_TAG_LEN};
 use crate::error::{CipherResult, DhResult, HandshakeError, HandshakeResult, KemResult};
 use crate::handshakepattern::HandshakePattern;
 use crate::handshakestate::HandshakeStatus;
+use crate::symmetricstate::SymmetricState;
 use crate::transportstate::TransportState;
 use crate::KeyPair;
 
@@ -279,7 +280,7 @@ where
     /// Read next handshake message
     fn read_message_impl(&mut self, message: &[u8], out: &mut [u8]) -> HandshakeResult<usize>;
     /// Extract ciphers
-    fn get_ciphers(&self) -> CipherStates<C>;
+    fn get_ciphers(&self) -> CipherResult<CipherStates<C>>;
     /// Get handshake hash `h`
     fn get_hash(&self) -> H::Output;
     /// Mix data into the handshake hash `h`
@@ -460,4 +461,10 @@ where
     {
         TransportState::new(self)
     }
+
+    /// Get a copy of the handshakers current [`SymmetricState`]
+    fn get_state(&self) -> SymmetricState<C, H>;
+
+    /// Get a mutable reference of the handshakers current [`SymmetricState`]
+    fn get_state_mut(&mut self) -> &mut SymmetricState<C, H>;
 }

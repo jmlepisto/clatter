@@ -86,6 +86,8 @@ pub enum CipherError {
     Decrypt,
     /// Encrypt error
     Encrypt,
+    /// Missing key material
+    MissingKeyMaterial,
 }
 
 /// Cipher operation result type

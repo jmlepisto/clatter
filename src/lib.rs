@@ -170,7 +170,7 @@ mod crypto_impl;
 pub mod error;
 pub mod handshakepattern;
 mod handshakestate;
-mod symmetricstate;
+pub mod symmetricstate;
 pub mod traits;
 pub mod transportstate;
 

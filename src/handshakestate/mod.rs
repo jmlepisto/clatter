@@ -4,7 +4,7 @@ use zeroize::Zeroize;
 use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;
 use crate::constants::{MAX_PSKS, PSK_LEN};
-use crate::error::{HandshakeError, HandshakeResult};
+use crate::error::{CipherResult, HandshakeError, HandshakeResult};
 use crate::handshakepattern::{HandshakePattern, Token};
 use crate::symmetricstate::SymmetricState;
 use crate::traits::{Cipher, Hash, Rng};
@@ -113,7 +113,7 @@ where
         self.symmetricstate.get_hash()
     }
 
-    pub(crate) fn get_ciphers(&self) -> CipherStates<C> {
+    pub(crate) fn get_ciphers(&self) -> CipherResult<CipherStates<C>> {
         self.symmetricstate.split()
     }
 

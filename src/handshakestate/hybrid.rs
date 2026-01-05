@@ -8,7 +8,7 @@ use super::HandshakeInternals;
 use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;
 use crate::constants::{MAX_PSKS, PSK_LEN};
-use crate::error::{HandshakeError, HandshakeResult};
+use crate::error::{CipherResult, HandshakeError, HandshakeResult};
 use crate::handshakepattern::{HandshakePattern, HandshakeType, Token};
 use crate::handshakestate::HandshakeStatus;
 use crate::symmetricstate::SymmetricState;
@@ -704,7 +704,7 @@ where
         Ok(out_len)
     }
 
-    fn get_ciphers(&self) -> CipherStates<C> {
+    fn get_ciphers(&self) -> CipherResult<CipherStates<C>> {
         self.dh_internals.get_ciphers()
     }
 
@@ -843,5 +843,13 @@ where
             (Some(dh), Some(kem)) => Some(HybridPubKeyPair::new(dh.clone(), kem.clone())),
             _ => None,
         }
+    }
+
+    fn get_state(&self) -> SymmetricState<C, H> {
+        self.dh_internals.symmetricstate.clone()
+    }
+
+    fn get_state_mut(&mut self) -> &mut SymmetricState<C, H> {
+        &mut self.dh_internals.symmetricstate
     }
 }

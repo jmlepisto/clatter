@@ -31,11 +31,8 @@ impl clatter::traits::CryptoComponent for MySillyHash {
 
 impl clatter::traits::Hash for MySillyHash {
     // Most of the crypto traits by clatter have type parameters, which
-    // indicate some static sizing qualities of the algorithms. These types
-    // usually have to implement `clatter::bytearray::ByteArray` but implementations
-    // for the most common static array sizes are built-in.
+    // indicate some static sizing qualities of the algorithms.
     type Block = [u8; 32];
-    // ..But you can also use any size with the help of ArrayVec (stack allocated).
     // Here we are also using `SensitiveByteArray`, a wrapper provided
     // by Clatter, which is zeroized on drop.
     type Output = SensitiveByteArray<ArrayVec<u8, 32>>;

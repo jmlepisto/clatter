@@ -1,6 +1,8 @@
 use crate::bytearray::ByteArray;
+use crate::cipherstate::CipherStates;
 use crate::constants::HYBRID_DUAL_LAYER_HANDSHAKE_DOMAIN;
-use crate::error::HandshakeResult;
+use crate::error::{CipherResult, HandshakeResult};
+use crate::symmetricstate::SymmetricState;
 use crate::traits::{Cipher, Handshaker, HandshakerInternal, Hash};
 use crate::transportstate::TransportState;
 
@@ -184,7 +186,7 @@ where
         }
     }
 
-    fn get_ciphers(&self) -> crate::cipherstate::CipherStates<C> {
+    fn get_ciphers(&self) -> CipherResult<CipherStates<C>> {
         self.inner.get_ciphers()
     }
 
@@ -260,5 +262,15 @@ where
     /// Get remote ephemeral key of the **inner** handshake (if available)
     fn get_remote_ephemeral(&self) -> Option<Self::E> {
         self.inner.get_remote_ephemeral()
+    }
+
+    /// Get a copy of the **inner** handshakers current [`SymmetricState`]
+    fn get_state(&self) -> SymmetricState<C, H> {
+        self.inner.get_state()
+    }
+
+    /// Get a mutable reference of the **inner** handshakers current [`SymmetricState`]
+    fn get_state_mut(&mut self) -> &mut SymmetricState<C, H> {
+        self.inner.get_state_mut()
     }
 }

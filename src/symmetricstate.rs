@@ -7,7 +7,7 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::bytearray::ByteArray;
 use crate::cipherstate::{CipherState, CipherStates};
-use crate::error::CipherResult;
+use crate::error::{CipherError, CipherResult};
 use crate::traits::{Cipher, Hash};
 
 /// Symmetric state used during handshakes to establish session hash and chaining key
@@ -28,7 +28,7 @@ where
     H: Hash,
 {
     /// Initialize new symmetric state for the given Noise protocol type
-    pub(crate) fn new(noise_pattern_name: &str) -> Self {
+    pub fn new(noise_pattern_name: &str) -> Self {
         let pattern_bytes = noise_pattern_name.as_bytes();
         let mut h = H::Output::new_zero();
 
@@ -46,29 +46,44 @@ where
         }
     }
 
+    /// Initialize new symmetric state with zeroed key material
+    pub fn new_zero() -> Self {
+        Self {
+            cipherstate: None,
+            ck: H::Output::new_zero(),
+            h: H::Output::new_zero(),
+        }
+    }
+
+    /// Mix hash material into the symmetric state
+    ///
     /// # Protocol
     /// ```text
     /// Sets h = HASH(h || data)
     /// ```
-    pub(crate) fn mix_hash(&mut self, bytes: &[u8]) {
+    pub fn mix_hash(&mut self, data: &[u8]) {
         let mut h = H::default();
         h.input(self.h.as_slice());
-        h.input(bytes);
+        h.input(data);
         self.h = h.result();
     }
 
+    /// Mix key material into the symmetric state
+    ///
     /// # Protocol
     /// ```text
     /// * Sets ck, temp_k = HKDF(ck, input_key_material, 2).
     /// * If HASHLEN is 64, then truncates temp_k to 32 bytes.
     /// * Calls InitializeKey(temp_k).
     /// ```
-    pub(crate) fn mix_key(&mut self, input_key_material: &[u8]) {
+    pub fn mix_key(&mut self, input_key_material: &[u8]) {
         let (ck, temp_k) = H::hkdf(self.ck.as_slice(), input_key_material);
         self.ck = ck;
         self.cipherstate = Some(CipherState::new(&temp_k.as_slice()[..C::key_len()], 0));
     }
 
+    /// Mix key and hash material into the symmetric state
+    ///
     /// # Protocol
     /// ```text
     /// * Sets ck, temp_h, temp_k = HKDF(ck, input_key_material, 3).
@@ -76,7 +91,7 @@ where
     /// * If HASHLEN is 64, then truncates temp_k to 32 bytes.
     /// * Calls InitializeKey(temp_k).
     /// ```
-    pub(crate) fn mix_key_and_hash(&mut self, input_key_material: &[u8]) {
+    pub fn mix_key_and_hash(&mut self, input_key_material: &[u8]) {
         let (ck, temp_h, temp_k) = H::hkdf3(self.ck.as_slice(), input_key_material);
         self.ck = ck;
         self.mix_hash(temp_h.as_slice());
@@ -87,11 +102,10 @@ where
     ///
     /// # Warning
     /// If no key material is available, `plaintext` is simply copied to the `out` buffer
-    pub(crate) fn encrypt_and_hash(
-        &mut self,
-        plaintext: &[u8],
-        out: &mut [u8],
-    ) -> CipherResult<()> {
+    ///
+    /// # Errors
+    /// * [CipherError] - Cipher related error from the implementation level
+    pub fn encrypt_and_hash(&mut self, plaintext: &[u8], out: &mut [u8]) -> CipherResult<()> {
         if let Some(ref mut c) = self.cipherstate {
             c.encrypt_with_ad(self.h.as_slice(), plaintext, out)?;
         } else {
@@ -105,7 +119,10 @@ where
     ///
     /// # Warning
     /// If no key material is available, `data` is simply copied to the `out` buffer
-    pub(crate) fn decrypt_and_hash(&mut self, data: &[u8], out: &mut [u8]) -> CipherResult<()> {
+    ///
+    /// # Errors
+    /// * [CipherError] - Cipher related error from the implementation level
+    pub fn decrypt_and_hash(&mut self, data: &[u8], out: &mut [u8]) -> CipherResult<()> {
         if let Some(ref mut c) = self.cipherstate {
             c.decrypt_with_ad(self.h.as_slice(), data, out)?;
         } else {
@@ -117,12 +134,11 @@ where
 
     /// Return [`CipherStates`] for encrypting and decrypting transport messages
     ///
-    /// # Panics
-    /// * If no key material has been established
-    pub(crate) fn split(&self) -> CipherStates<C> {
-        // This means that we are still in the initial state
-        if self.ck == self.h {
-            panic!("No key material")
+    /// # Errors
+    /// * [`CipherError::MissingKeyMaterial`] - No key material has been established
+    pub fn split(&self) -> CipherResult<CipherStates<C>> {
+        if !self.has_key() {
+            return Err(CipherError::MissingKeyMaterial);
         }
 
         let (mut temp_k1, mut temp_k2) = H::hkdf(self.ck.as_slice(), &[]);
@@ -134,16 +150,21 @@ where
 
         temp_k1.zeroize();
         temp_k2.zeroize();
-        ct
+        Ok(ct)
     }
 
-    /// Get handshake hash
-    pub(crate) fn get_hash(&self) -> H::Output {
+    /// Get symmetric state hash `h`
+    pub fn get_hash(&self) -> H::Output {
         self.h.clone()
     }
 
-    /// Check if have already established key material
-    pub(crate) fn has_key(&self) -> bool {
+    /// Get symmetric state chaining key `ck`
+    pub fn get_chaining_key(&self) -> H::Output {
+        self.ck.clone()
+    }
+
+    /// Check if the symmetric state has already established key material
+    pub fn has_key(&self) -> bool {
         self.cipherstate.is_some()
     }
 }
@@ -210,8 +231,8 @@ mod tests {
         assert!(s1 == s2);
 
         // Split
-        let s1_c = s1.split();
-        let s2_c = s2.split();
+        let s1_c = s1.split().unwrap();
+        let s2_c = s2.split().unwrap();
 
         assert!(s1_c.initiator_to_responder.take() == s2_c.initiator_to_responder.take());
         assert!(s1_c.responder_to_initiator.take() == s2_c.responder_to_initiator.take());
@@ -236,11 +257,10 @@ mod tests {
         cant_split_without_key::<C, H>();
     }
 
-    #[should_panic]
     fn cant_split_without_key<C: Cipher, H: Hash>() {
         let mut s1 = SymmetricState::<C, H>::new("complex delirium");
         s1.mix_hash(b"all wound up");
-        s1.split();
+        assert!(s1.split().is_err());
     }
 
     #[test]
