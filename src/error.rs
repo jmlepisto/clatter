@@ -30,6 +30,8 @@ pub enum HandshakeError {
     Cipher(#[from] CipherError),
     /// Transport error: {0}
     Transport(#[from] TransportError),
+    /// Handshake pattern error: {0}
+    Pattern(#[from] PatternError),
 }
 
 /// Handshake operation result type
@@ -92,3 +94,15 @@ pub enum CipherError {
 
 /// Cipher operation result type
 pub type CipherResult<T> = Result<T, CipherError>;
+
+/// Errors that can happen as a result from using invalid handshake patterns
+#[derive(Debug, Error, Display)]
+pub enum PatternError {
+    /// PSK validity rule violation
+    PskValidityViolation,
+    /// PQ token ordering violation
+    PqTokenOrderViolation,
+}
+
+/// Pattern operation result type
+pub type PatternResult<T> = Result<T, PatternError>;

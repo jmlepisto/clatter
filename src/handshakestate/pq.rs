@@ -8,7 +8,7 @@ use super::HandshakeInternals;
 use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;
 use crate::constants::{MAX_PSKS, PSK_LEN};
-use crate::error::{CipherResult, HandshakeError, HandshakeResult};
+use crate::error::{CipherResult, HandshakeError, HandshakeResult, PatternError};
 use crate::handshakepattern::{HandshakePattern, HandshakeType, Token};
 use crate::handshakestate::HandshakeStatus;
 use crate::symmetricstate::SymmetricState;
@@ -180,6 +180,8 @@ where
             responder_pattern_index: 0,
             psks: ArrayVec::<[u8; PSK_LEN], MAX_PSKS>::new(),
             rng: RNG::default(),
+            psk_applied: false,
+            own_randomness_applied: false,
         };
 
         let this = Self { internals };
@@ -238,11 +240,16 @@ where
                     }
                     out[cur..cur + EKEM::PubKey::len()].copy_from_slice(e_pub.as_slice());
                     cur += EKEM::PubKey::len();
+
+                    // Sending E satisfies the requirement of applying self-chosen randomness
+                    self.internals.own_randomness_applied = true;
                 }
                 Token::S => {
                     if self.internals.s.is_none() {
                         return Err(HandshakeError::MissingMaterial);
                     }
+
+                    self.internals.psk_validity_check()?;
 
                     let len = if self.internals.symmetricstate.has_key() {
                         SKEM::PubKey::len() + C::tag_len()
@@ -268,6 +275,7 @@ where
                     } else {
                         return Err(HandshakeError::PskMissing);
                     }
+                    self.internals.psk_applied = true;
                 }
                 Token::Ekem => {
                     // Should have peer e
@@ -283,12 +291,17 @@ where
                     self.internals.symmetricstate.mix_key(ss.as_slice());
                     out[cur..cur + EKEM::Ct::len()].copy_from_slice(ct.as_slice());
                     cur += EKEM::Ct::len();
+
+                    // Sending Ekem satisfies the requirement of applying self-chosen randomness
+                    self.internals.own_randomness_applied = true;
                 }
                 Token::Skem => {
                     // Should have peer s
                     if self.internals.rs.is_none() {
                         return Err(HandshakeError::MissingMaterial);
                     }
+
+                    self.internals.psk_validity_check()?;
 
                     let len = if self.internals.symmetricstate.has_key() {
                         SKEM::Ct::len() + C::tag_len()
@@ -308,9 +321,19 @@ where
                         .symmetricstate
                         .mix_key_and_hash(ss.as_slice());
                     cur += len;
+
+                    // Sending Skem satisfies the requirement of applying self-chosen randomness
+                    self.internals.own_randomness_applied = true;
                 }
                 _ => panic!("Incompatible pattern"),
             }
+        }
+
+        if !payload.is_empty()
+            && self.internals.psk_applied
+            && !self.internals.own_randomness_applied
+        {
+            return Err(PatternError::PskValidityViolation.into());
         }
 
         self.internals
@@ -555,5 +578,145 @@ where
 
     fn get_state_mut(&mut self) -> &mut SymmetricState<C, H> {
         &mut self.internals.symmetricstate
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::crypto::cipher::ChaChaPoly;
+    use crate::crypto::hash::Sha256;
+    use crate::crypto::kem::rust_crypto_ml_kem;
+    use crate::error::{HandshakeError, PatternError};
+    use crate::handshakepattern::{HandshakePattern, Token};
+    use crate::traits::Handshaker;
+
+    type TestKem = rust_crypto_ml_kem::MlKem1024;
+
+    #[test]
+    fn psk_validity_violation_with_payload() {
+        let pattern = HandshakePattern::new("test", &[], &[], &[&[Token::Psk]], &[&[Token::Ekem]]);
+
+        let mut handshake = crate::handshakestate::pq::PqHandshakeCore::<
+            TestKem,
+            TestKem,
+            ChaChaPoly,
+            Sha256,
+            crate::crypto::rng::DefaultRng,
+        >::new(
+            pattern,
+            &[],
+            true, // initiator
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+        handshake.push_psk(&[0u8; 32]);
+
+        let mut out = [0u8; 2048];
+        let result = handshake.write_message(b"test payload", &mut out);
+        assert!(matches!(
+            result,
+            Err(HandshakeError::Pattern(PatternError::PskValidityViolation))
+        ));
+    }
+
+    #[test]
+    fn psk_validity_ok_with_e_before_psk() {
+        let pattern = HandshakePattern::new(
+            "test",
+            &[],
+            &[],
+            &[&[Token::E, Token::Psk]],
+            &[&[Token::Ekem]],
+        );
+
+        let mut handshake = crate::handshakestate::pq::PqHandshakeCore::<
+            TestKem,
+            TestKem,
+            ChaChaPoly,
+            Sha256,
+            crate::crypto::rng::DefaultRng,
+        >::new(
+            pattern,
+            &[],
+            true, // initiator
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+        handshake.push_psk(&[0u8; 32]);
+
+        let mut out = [0u8; 2048];
+        let result = handshake.write_message(b"test payload", &mut out);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn psk_validity_ok_with_e_after_psk() {
+        let pattern = HandshakePattern::new(
+            "test",
+            &[],
+            &[],
+            &[&[Token::Psk, Token::E]],
+            &[&[Token::Ekem]],
+        );
+
+        let mut handshake = crate::handshakestate::pq::PqHandshakeCore::<
+            TestKem,
+            TestKem,
+            ChaChaPoly,
+            Sha256,
+            crate::crypto::rng::DefaultRng,
+        >::new(
+            pattern,
+            &[],
+            true, // initiator
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+        handshake.push_psk(&[0u8; 32]);
+
+        let mut out = [0u8; 2048];
+        let result = handshake.write_message(b"test payload", &mut out);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn psk_validity_ok_with_empty_payload() {
+        let pattern = HandshakePattern::new("test", &[], &[], &[&[Token::Psk]], &[&[Token::Ekem]]);
+
+        let mut handshake = crate::handshakestate::pq::PqHandshakeCore::<
+            TestKem,
+            TestKem,
+            ChaChaPoly,
+            Sha256,
+            crate::crypto::rng::DefaultRng,
+        >::new(
+            pattern,
+            &[],
+            true, // initiator
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+        handshake.push_psk(&[0u8; 32]);
+
+        let mut out = [0u8; 2048];
+        let result = handshake.write_message(&[], &mut out);
+        assert!(result.is_ok());
     }
 }

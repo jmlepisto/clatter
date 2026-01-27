@@ -45,6 +45,21 @@ This crate tracks Noise protocol framework **revision 34**. As of now we omit su
 * Deferred pattern support - Can be implemented by the user
 * Fallback pattern support - Can be implemented by the user
 
+### PSK validity rule
+
+Clatter adopts a modified interpretation of the PSK validity rule for post-quantum patterns, the original rule being:
+
+> A party may not send any encrypted data after it processes a "psk" token unless it
+> has previously sent an ephemeral public key (an "e" token), either before or after
+> the "psk" token.
+
+When post-quantum patterns are used, sending either an `e` or `ekem` token provides the required
+self-chosen randomness equivalent to the `e` token in classic Noise patterns. Both tokens result
+in the `MixKey` Noise function being called with derived key material from a self-chosen randomness
+source **before** any encryption occurs, ensuring the same security guarantees as the original rule.
+
+`skem` also satisfies this requirement if it comes before any `psk` tokens in the message pattern.
+
 ## PQ? NQ? Why should I care?
 
 This crate refers to classical Noise handshakes as NQ handshakes (non-post-quantum). But what does a

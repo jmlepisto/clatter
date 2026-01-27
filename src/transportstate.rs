@@ -351,3 +351,295 @@ impl<C: Cipher, H: Hash> TransportState<C, H> {
         self.cipherstates
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::TransportState;
+    use crate::crypto::cipher::ChaChaPoly;
+    use crate::crypto::hash::Sha256;
+    use crate::error::{HandshakeError, TransportError};
+    use crate::handshakepattern::noise_nn;
+    use crate::handshakestate::nq::NqHandshakeCore;
+    use crate::traits::{Dh, Handshaker};
+
+    fn create_transport_states() -> (
+        TransportState<ChaChaPoly, Sha256>,
+        TransportState<ChaChaPoly, Sha256>,
+    ) {
+        let pattern = noise_nn();
+        let mut alice = NqHandshakeCore::<
+            crate::crypto::dh::X25519,
+            ChaChaPoly,
+            Sha256,
+            crate::crypto::rng::DefaultRng,
+        >::new(pattern.clone(), &[], true, None, None, None, None)
+        .unwrap();
+        let mut bob = NqHandshakeCore::<
+            crate::crypto::dh::X25519,
+            ChaChaPoly,
+            Sha256,
+            crate::crypto::rng::DefaultRng,
+        >::new(pattern, &[], false, None, None, None, None)
+        .unwrap();
+
+        let mut alice_buf = [0u8; 2048];
+        let mut bob_buf = [0u8; 2048];
+
+        // Complete handshake
+        let n = alice.write_message(&[], &mut alice_buf).unwrap();
+        let _ = bob.read_message(&alice_buf[..n], &mut bob_buf).unwrap();
+        let n = bob.write_message(&[], &mut bob_buf).unwrap();
+        let _ = alice.read_message(&bob_buf[..n], &mut alice_buf).unwrap();
+
+        let alice_transport = alice.finalize().unwrap();
+        let bob_transport = bob.finalize().unwrap();
+
+        (alice_transport, bob_transport)
+    }
+
+    #[test]
+    fn transport_basic_send_receive() {
+        let (mut alice, mut bob) = create_transport_states();
+
+        let msg = b"Hello, world!";
+        let mut send_buf = [0u8; 2048];
+        let mut recv_buf = [0u8; 2048];
+
+        // Alice sends to Bob
+        let n = alice.send(msg, &mut send_buf).unwrap();
+        let m = bob.receive(&send_buf[..n], &mut recv_buf).unwrap();
+        assert_eq!(&recv_buf[..m], msg);
+
+        // Bob sends to Alice
+        let n = bob.send(msg, &mut send_buf).unwrap();
+        let m = alice.receive(&send_buf[..n], &mut recv_buf).unwrap();
+        assert_eq!(&recv_buf[..m], msg);
+    }
+
+    #[test]
+    fn transport_buffer_too_small_send() {
+        let (mut alice, _) = create_transport_states();
+
+        let msg = b"test message";
+        let mut buf = [0u8; 5]; // Too small
+
+        let result = alice.send(msg, &mut buf);
+        assert!(matches!(result, Err(TransportError::BufferTooSmall)));
+    }
+
+    #[test]
+    fn transport_buffer_too_small_receive() {
+        let (mut alice, mut bob) = create_transport_states();
+
+        let msg = b"test message";
+        let mut send_buf = [0u8; 2048];
+        let mut recv_buf = [0u8; 5]; // Too small
+
+        let n = alice.send(msg, &mut send_buf).unwrap();
+        let result = bob.receive(&send_buf[..n], &mut recv_buf);
+        assert!(matches!(result, Err(TransportError::BufferTooSmall)));
+    }
+
+    #[test]
+    fn transport_too_short_receive() {
+        let (_, mut bob) = create_transport_states();
+
+        let mut recv_buf = [0u8; 2048];
+        let short_msg = [0u8; 10]; // Too short (less than tag_len)
+
+        let result = bob.receive(&short_msg, &mut recv_buf);
+        assert!(matches!(result, Err(TransportError::TooShort)));
+    }
+
+    #[test]
+    fn transport_invalid_state_from_unfinished_handshake() {
+        let pattern = noise_nn();
+        let alice = NqHandshakeCore::<
+            crate::crypto::dh::X25519,
+            ChaChaPoly,
+            Sha256,
+            crate::crypto::rng::DefaultRng,
+        >::new(pattern, &[], true, None, None, None, None)
+        .unwrap();
+
+        // Try to finalize before handshake is complete
+        let result = alice.finalize();
+        assert!(matches!(result, Err(HandshakeError::InvalidState)));
+    }
+
+    #[test]
+    fn transport_one_way_violation_responder_send() {
+        // Create a one-way handshake (N pattern)
+        // N pattern: <- s (responder's static key is known to initiator)
+        let pattern = crate::handshakepattern::noise_n();
+        let mut rng = crate::crypto::rng::DefaultRng::default();
+        let bob_static = crate::crypto::dh::X25519::genkey_rng(&mut rng).unwrap();
+        let bob_static_pub = bob_static.public.clone();
+        let mut alice = NqHandshakeCore::<
+            crate::crypto::dh::X25519,
+            ChaChaPoly,
+            Sha256,
+            crate::crypto::rng::DefaultRng,
+        >::new(
+            pattern.clone(),
+            &[],
+            true,
+            None,
+            None,
+            Some(bob_static_pub),
+            None,
+        )
+        .unwrap();
+        let mut bob = NqHandshakeCore::<
+            crate::crypto::dh::X25519,
+            ChaChaPoly,
+            Sha256,
+            crate::crypto::rng::DefaultRng,
+        >::new(pattern, &[], false, Some(bob_static), None, None, None)
+        .unwrap();
+
+        let mut alice_buf = [0u8; 2048];
+        let mut bob_buf = [0u8; 2048];
+
+        // Complete one-way handshake
+        let n = alice.write_message(&[], &mut alice_buf).unwrap();
+        let _ = bob.read_message(&alice_buf[..n], &mut bob_buf).unwrap();
+
+        let mut bob_transport = bob.finalize().unwrap();
+
+        // Bob (responder) should not be able to send in one-way handshake
+        let msg = b"test";
+        let mut buf = [0u8; 2048];
+        let result = bob_transport.send(msg, &mut buf);
+        assert!(matches!(result, Err(TransportError::OneWayViolation)));
+    }
+
+    #[test]
+    fn transport_one_way_violation_initiator_receive() {
+        // Create a one-way handshake (N pattern)
+        // N pattern: <- s (responder's static key is known to initiator)
+        let pattern = crate::handshakepattern::noise_n();
+        let mut rng = crate::crypto::rng::DefaultRng::default();
+        let bob_static = crate::crypto::dh::X25519::genkey_rng(&mut rng).unwrap();
+        let bob_static_pub = bob_static.public.clone();
+        let mut alice = NqHandshakeCore::<
+            crate::crypto::dh::X25519,
+            ChaChaPoly,
+            Sha256,
+            crate::crypto::rng::DefaultRng,
+        >::new(
+            pattern.clone(),
+            &[],
+            true,
+            None,
+            None,
+            Some(bob_static_pub),
+            None,
+        )
+        .unwrap();
+        let mut bob = NqHandshakeCore::<
+            crate::crypto::dh::X25519,
+            ChaChaPoly,
+            Sha256,
+            crate::crypto::rng::DefaultRng,
+        >::new(pattern, &[], false, Some(bob_static), None, None, None)
+        .unwrap();
+
+        let mut alice_buf = [0u8; 2048];
+        let mut bob_buf = [0u8; 2048];
+
+        // Complete one-way handshake
+        let n = alice.write_message(&[], &mut alice_buf).unwrap();
+        let _ = bob.read_message(&alice_buf[..n], &mut bob_buf).unwrap();
+
+        let mut alice_transport = alice.finalize().unwrap();
+
+        // Alice (initiator) should not be able to receive in one-way handshake
+        let mut buf = [0u8; 2048];
+        let fake_msg = [0u8; 32]; // Fake encrypted message
+        let result = alice_transport.receive(&fake_msg, &mut buf);
+        assert!(matches!(result, Err(TransportError::OneWayViolation)));
+    }
+
+    #[test]
+    fn transport_nonce_management() {
+        let (mut alice, mut bob) = create_transport_states();
+
+        // Check initial nonces
+        assert_eq!(alice.sending_nonce(), 0);
+        assert_eq!(alice.receiving_nonce(), 0);
+        assert_eq!(bob.sending_nonce(), 0);
+        assert_eq!(bob.receiving_nonce(), 0);
+
+        // Send/receive messages to increment nonces
+        let msg = b"test";
+        let mut send_buf = [0u8; 2048];
+        let mut recv_buf = [0u8; 2048];
+
+        let n = alice.send(msg, &mut send_buf).unwrap();
+        bob.receive(&send_buf[..n], &mut recv_buf).unwrap();
+
+        // Nonces should have incremented
+        assert_eq!(alice.sending_nonce(), 1);
+        assert_eq!(bob.receiving_nonce(), 1);
+
+        // Test nonce setting
+        alice.set_receiving_nonce(42);
+        assert_eq!(alice.receiving_nonce(), 42);
+    }
+
+    #[test]
+    fn transport_rekey() {
+        let (mut alice, mut bob) = create_transport_states();
+
+        let msg = b"test";
+        let mut send_buf = [0u8; 2048];
+        let mut recv_buf = [0u8; 2048];
+
+        // Send a message
+        let n = alice.send(msg, &mut send_buf).unwrap();
+        bob.receive(&send_buf[..n], &mut recv_buf).unwrap();
+
+        // Rekey sender
+        alice.rekey_sender().unwrap();
+        bob.rekey_receiver().unwrap();
+
+        // Should still be able to communicate after rekey
+        let n = alice.send(msg, &mut send_buf).unwrap();
+        let m = bob.receive(&send_buf[..n], &mut recv_buf).unwrap();
+        assert_eq!(&recv_buf[..m], msg);
+    }
+
+    #[test]
+    fn transport_send_in_place() {
+        let (mut alice, mut bob) = create_transport_states();
+
+        let mut msg = [0u8; 2048];
+        msg[..13].copy_from_slice(b"Hello, world!");
+        let msg_len = 13;
+
+        let mut recv_buf = [0u8; 2048];
+
+        // Send in-place
+        let n = alice.send_in_place(&mut msg, msg_len).unwrap();
+        let m = bob.receive(&msg[..n], &mut recv_buf).unwrap();
+        assert_eq!(&recv_buf[..m], b"Hello, world!");
+    }
+
+    #[test]
+    fn transport_receive_in_place() {
+        let (mut alice, mut bob) = create_transport_states();
+
+        let msg = b"Hello, world!";
+        let mut send_buf = [0u8; 2048];
+        let mut recv_buf = [0u8; 2048];
+
+        // Send normally
+        let n = alice.send(msg, &mut send_buf).unwrap();
+        recv_buf[..n].copy_from_slice(&send_buf[..n]);
+
+        // Receive in-place
+        let m = bob.receive_in_place(&mut recv_buf, n).unwrap();
+        assert_eq!(&recv_buf[..m], msg);
+    }
+}

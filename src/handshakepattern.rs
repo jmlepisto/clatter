@@ -3,6 +3,7 @@
 use arrayvec::ArrayVec;
 
 use crate::constants::{MAX_HS_MESSAGES_PER_ROLE, MAX_TOKENS_PER_HS_MESSAGE};
+use crate::error::{PatternError, PatternResult};
 
 /// Handshake pattern type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -110,13 +111,17 @@ impl HandshakePattern {
     /// # Panics
     /// * If the pattern is invalid (empty pattern, no DH or KEM operations at all)
     /// * If the message sequences are too long, limits in [`crate::constants`]
-    pub fn new(
+    ///
+    /// # Errors
+    /// * [`PatternError::PskValidityViolation`] - If the pattern violates the PSK validity rule (Noise Protocol Framework Specification section 9.3)
+    /// * [`PatternError::PqTokenOrderViolation`] - If the pattern violates the PQ token ordering rule (PQNoise paper section 2.4)
+    pub fn try_new(
         name: &'static str,
         pre_initiator: &[Token],
         pre_responder: &[Token],
         initiator: &[&[Token]],
         responder: &[&[Token]],
-    ) -> Self {
+    ) -> PatternResult<Self> {
         let message_pattern = MessagePattern {
             initiator: initiator
                 .iter()
@@ -138,21 +143,150 @@ impl HandshakePattern {
             (false, false) => unreachable!("Invalid handshake pattern"),
         };
 
-        Self {
+        // Validate PSK validity rule if pattern has PSK
+        if message_pattern.has_psk() {
+            Self::validate_psk_rule(&message_pattern.initiator)?;
+            Self::validate_psk_rule(&message_pattern.responder)?;
+        }
+
+        if has_kem {
+            Self::validate_pq_token_order_rule(&message_pattern.initiator)?;
+            Self::validate_pq_token_order_rule(&message_pattern.responder)?;
+        }
+
+        Ok(Self {
             name,
             hs_type,
             has_psk: message_pattern.has_psk(),
             message_pattern,
             pre_initiator: pre_initiator.iter().copied().collect(),
             pre_responder: pre_responder.iter().copied().collect(),
-        }
+        })
     }
 
-    pub(crate) fn get_initiator_pattern_len(&self) -> usize {
+    /// Initialize a new handshake pattern
+    ///
+    /// # Arguments
+    /// * `name` - Pattern name
+    /// * `pre_initiator` - Tokens shared by initiator pre handshake
+    /// * `pre_responder` - Tokens shared by responder pre handshake
+    /// * `initiator` - Initiator messages
+    /// * `responder` - Responder messages
+    ///
+    /// # Panics
+    /// * If the pattern is invalid (empty pattern, no DH or KEM operations at all)
+    /// * If the message sequences are too long, limits in [`crate::constants`]
+    /// * If the pattern violates the PSK validity rule (Noise Protocol Framework Specification section 9.3)
+    /// * If the pattern violates the PQ token ordering rule (PQNoise paper section 2.4)
+    pub fn new(
+        name: &'static str,
+        pre_initiator: &[Token],
+        pre_responder: &[Token],
+        initiator: &[&[Token]],
+        responder: &[&[Token]],
+    ) -> Self {
+        Self::try_new(name, pre_initiator, pre_responder, initiator, responder)
+            .unwrap_or_else(|e| panic!("Handshake pattern error: {}", e))
+    }
+
+    /// Validate PQ token ordering rule for a party's message pattern
+    ///
+    /// The validity rule expressed by PQNoise authors is as follows:
+    ///
+    /// > Within a message ekem always precedes skem which
+    /// > always precedes all public keys and the payload
+    ///
+    /// # Errors
+    /// * [`PatternError::PqTokenOrderViolation`] if the rule is violated
+    pub fn validate_pq_token_order_rule(
+        messages: &[ArrayVec<Token, MAX_TOKENS_PER_HS_MESSAGE>],
+    ) -> PatternResult<()> {
+        for message in messages.iter() {
+            let mut skem_seen = false;
+            let mut public_key_seen = false;
+            for token in message.iter() {
+                match token {
+                    Token::Ekem => {
+                        if public_key_seen {
+                            return Err(PatternError::PqTokenOrderViolation);
+                        }
+
+                        if skem_seen {
+                            return Err(PatternError::PqTokenOrderViolation);
+                        }
+                    }
+                    Token::Skem => {
+                        skem_seen = true;
+                        if public_key_seen {
+                            return Err(PatternError::PqTokenOrderViolation);
+                        }
+                    }
+                    Token::E | Token::S => {
+                        public_key_seen = true;
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validate PSK validity rule for a party's message pattern
+    ///
+    /// The relaxed rule applied by Clatter: A party may not send any encrypted data after it processes a "psk" token
+    /// unless it has previously sent an "e" token or "ekem" token, either before or after the "psk" token.
+    ///
+    /// Encrypted data includes:
+    /// - `skem` token (encrypts its ciphertext if a key exists, then applies randomness)
+    /// - `s` token (encrypts static public key if a key exists)
+    ///
+    /// # Errors
+    /// * [`PatternError::PskValidityViolation`] if the rule is violated
+    pub fn validate_psk_rule(
+        messages: &[ArrayVec<Token, MAX_TOKENS_PER_HS_MESSAGE>],
+    ) -> PatternResult<()> {
+        let mut psk_sent = false;
+        for message in messages.iter() {
+            for token in message.iter() {
+                match token {
+                    Token::Psk => {
+                        psk_sent = true;
+                    }
+                    Token::E | Token::Ekem => {
+                        // E or Ekem token applies randomness before any encryption, safe to early return
+                        return Ok(());
+                    }
+                    Token::Skem => {
+                        if psk_sent {
+                            return Err(PatternError::PskValidityViolation);
+                        } else {
+                            // If Skem comes before PSK, it satisfies the requirement of applying randomness before any encryption
+                            return Ok(());
+                        }
+                    }
+                    Token::S => {
+                        if psk_sent {
+                            return Err(PatternError::PskValidityViolation);
+                        }
+
+                        // S does not apply randomness, continue validation...
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Get initiator message pattern length
+    pub fn get_initiator_pattern_len(&self) -> usize {
         self.message_pattern.initiator.len()
     }
 
-    pub(crate) fn get_responder_pattern_len(&self) -> usize {
+    /// Get responder message pattern length
+    pub fn get_responder_pattern_len(&self) -> usize {
         self.message_pattern.responder.len()
     }
 
@@ -170,7 +304,7 @@ impl HandshakePattern {
     ///
     /// # Panics
     /// Panics if message index is larger than the pattern length
-    pub(crate) fn get_initiator_pattern(&self, index: usize) -> &[Token] {
+    pub fn get_initiator_pattern(&self, index: usize) -> &[Token] {
         &self.message_pattern.initiator[index]
     }
 
@@ -178,12 +312,12 @@ impl HandshakePattern {
     ///
     /// # Panics
     /// Panics if message index is larger than the pattern length
-    pub(crate) fn get_responder_pattern(&self, index: usize) -> &[Token] {
+    pub fn get_responder_pattern(&self, index: usize) -> &[Token] {
         &self.message_pattern.responder[index]
     }
 
     /// Check if the pattern includes PSKs
-    pub(crate) fn has_psk(&self) -> bool {
+    pub fn has_psk(&self) -> bool {
         self.has_psk
     }
 
@@ -426,29 +560,11 @@ pub fn noise_pqix() -> HandshakePattern {
 // PQ patterns with PSKs:
 
 /// ```text
-/// -> psk, e
-/// <- ekem
-/// ```
-pub fn noise_pqnn_psk0() -> HandshakePattern {
-    noise_pqnn().add_psks(&[0], "pqNNpsk0")
-}
-
-/// ```text
 /// -> e
 /// <- ekem, psk
 /// ```
 pub fn noise_pqnn_psk2() -> HandshakePattern {
     noise_pqnn().add_psks(&[2], "pqNNpsk2")
-}
-
-/// ```text
-/// <- s
-/// ...
-/// -> psk, skem, e
-/// <- ekem
-/// ```
-pub fn noise_pqnk_psk0() -> HandshakePattern {
-    noise_pqnk().add_psks(&[0], "pqNKpsk0")
 }
 
 /// ```text
@@ -504,32 +620,11 @@ pub fn noise_pqxx_psk3() -> HandshakePattern {
 /// ```text
 /// -> s
 /// ...
-/// -> psk, e
-/// <- ekem, skem
-/// ```
-pub fn noise_pqkn_psk0() -> HandshakePattern {
-    noise_pqkn().add_psks(&[0], "pqKNpsk0")
-}
-
-/// ```text
-/// -> s
-/// ...
 /// -> e
 /// <- ekem, skem, psk
 /// ```
 pub fn noise_pqkn_psk2() -> HandshakePattern {
     noise_pqkn().add_psks(&[2], "pqKNpsk2")
-}
-
-/// ```text
-/// -> s
-/// <- s
-/// ...
-/// -> psk, skem, e
-/// <- ekem, skem
-/// ```
-pub fn noise_pqkk_psk0() -> HandshakePattern {
-    noise_pqkk().add_psks(&[0], "pqKKpsk0")
 }
 
 /// ```text
@@ -1022,7 +1117,7 @@ pub fn noise_ix_psk2() -> HandshakePattern {
 
 /// ```text
 /// -> e
-/// <- e, ee, ekem
+/// <- ekem, e, ee
 /// ```
 pub fn noise_hybrid_nn() -> HandshakePattern {
     HandshakePattern::new(
@@ -1030,7 +1125,7 @@ pub fn noise_hybrid_nn() -> HandshakePattern {
         &[],
         &[],
         &[&[Token::E]],
-        &[&[Token::E, Token::EE, Token::Ekem]],
+        &[&[Token::Ekem, Token::E, Token::EE]],
     )
 }
 
@@ -1038,7 +1133,7 @@ pub fn noise_hybrid_nn() -> HandshakePattern {
 /// <- s
 /// ...
 /// -> skem, e, es
-/// <- e, ee, ekem
+/// <- ekem, e, ee
 /// ```
 pub fn noise_hybrid_nk() -> HandshakePattern {
     HandshakePattern::new(
@@ -1046,13 +1141,13 @@ pub fn noise_hybrid_nk() -> HandshakePattern {
         &[],
         &[Token::S],
         &[&[Token::Skem, Token::E, Token::ES]],
-        &[&[Token::E, Token::EE, Token::Ekem]],
+        &[&[Token::Ekem, Token::E, Token::EE]],
     )
 }
 
 /// ```text
 /// -> e
-/// <- e, ee, ekem, s, es
+/// <- ekem, e, ee, s, es
 /// -> skem
 /// ```
 pub fn noise_hybrid_nx() -> HandshakePattern {
@@ -1061,7 +1156,7 @@ pub fn noise_hybrid_nx() -> HandshakePattern {
         &[],
         &[],
         &[&[Token::E], &[Token::Skem]],
-        &[&[Token::E, Token::EE, Token::Ekem, Token::S, Token::ES]],
+        &[&[Token::Ekem, Token::E, Token::EE, Token::S, Token::ES]],
     )
 }
 
@@ -1069,7 +1164,7 @@ pub fn noise_hybrid_nx() -> HandshakePattern {
 /// -> s
 /// ...
 /// -> e
-/// <- e, ee, se, ekem, skem
+/// <- ekem, skem, e, ee, se
 /// ```
 pub fn noise_hybrid_kn() -> HandshakePattern {
     HandshakePattern::new(
@@ -1077,7 +1172,7 @@ pub fn noise_hybrid_kn() -> HandshakePattern {
         &[Token::S],
         &[],
         &[&[Token::E]],
-        &[&[Token::E, Token::EE, Token::SE, Token::Ekem, Token::Skem]],
+        &[&[Token::Ekem, Token::Skem, Token::E, Token::EE, Token::SE]],
     )
 }
 
@@ -1086,7 +1181,7 @@ pub fn noise_hybrid_kn() -> HandshakePattern {
 /// <- s
 /// ...
 /// -> skem, e, es, ss
-/// <- e, ee, se, ekem, skem
+/// <- ekem, skem, e, ee, se
 /// ```
 pub fn noise_hybrid_kk() -> HandshakePattern {
     HandshakePattern::new(
@@ -1094,7 +1189,7 @@ pub fn noise_hybrid_kk() -> HandshakePattern {
         &[Token::S],
         &[Token::S],
         &[&[Token::Skem, Token::E, Token::ES, Token::SS]],
-        &[&[Token::E, Token::EE, Token::SE, Token::Ekem, Token::Skem]],
+        &[&[Token::Ekem, Token::Skem, Token::E, Token::EE, Token::SE]],
     )
 }
 
@@ -1102,7 +1197,7 @@ pub fn noise_hybrid_kk() -> HandshakePattern {
 /// -> s
 /// ...
 /// -> e
-/// <- e, ee, se, ekem, skem, s, es
+/// <- ekem, skem, e, ee, se, s, es
 /// -> skem
 /// ```
 pub fn noise_hybrid_kx() -> HandshakePattern {
@@ -1112,11 +1207,11 @@ pub fn noise_hybrid_kx() -> HandshakePattern {
         &[],
         &[&[Token::E], &[Token::Skem]],
         &[&[
+            Token::Ekem,
+            Token::Skem,
             Token::E,
             Token::EE,
             Token::SE,
-            Token::Ekem,
-            Token::Skem,
             Token::S,
             Token::ES,
         ]],
@@ -1125,7 +1220,7 @@ pub fn noise_hybrid_kx() -> HandshakePattern {
 
 /// ```text
 /// -> e
-/// <- e, ee, ekem
+/// <- ekem, e, ee
 /// -> s, se
 /// <- skem
 /// ```
@@ -1135,7 +1230,7 @@ pub fn noise_hybrid_xn() -> HandshakePattern {
         &[],
         &[],
         &[&[Token::E], &[Token::S, Token::SE]],
-        &[&[Token::E, Token::EE, Token::Ekem], &[Token::Skem]],
+        &[&[Token::Ekem, Token::E, Token::EE], &[Token::Skem]],
     )
 }
 
@@ -1143,7 +1238,7 @@ pub fn noise_hybrid_xn() -> HandshakePattern {
 /// <- s
 /// ...
 /// -> skem, e, es
-/// <- e, ee, ekem
+/// <- ekem, e, ee
 /// -> s, se
 /// <- skem
 /// ```
@@ -1153,13 +1248,13 @@ pub fn noise_hybrid_xk() -> HandshakePattern {
         &[],
         &[Token::S],
         &[&[Token::Skem, Token::E, Token::ES], &[Token::S, Token::SE]],
-        &[&[Token::E, Token::EE, Token::Ekem], &[Token::Skem]],
+        &[&[Token::Ekem, Token::E, Token::EE], &[Token::Skem]],
     )
 }
 
 /// ```text
 /// -> e
-/// <- e, ee, ekem, s, es
+/// <- ekem, e, ee, s, es
 /// -> skem, s, se
 /// <- skem
 /// ```
@@ -1170,7 +1265,7 @@ pub fn noise_hybrid_xx() -> HandshakePattern {
         &[],
         &[&[Token::E], &[Token::Skem, Token::S, Token::SE]],
         &[
-            &[Token::E, Token::EE, Token::Ekem, Token::S, Token::ES],
+            &[Token::Ekem, Token::E, Token::EE, Token::S, Token::ES],
             &[Token::Skem],
         ],
     )
@@ -1178,7 +1273,7 @@ pub fn noise_hybrid_xx() -> HandshakePattern {
 
 /// ```text
 /// -> e, s
-/// <- e, ee, se, ekem, skem
+/// <- ekem, skem, e, ee, se
 /// ```
 pub fn noise_hybrid_in() -> HandshakePattern {
     HandshakePattern::new(
@@ -1186,7 +1281,7 @@ pub fn noise_hybrid_in() -> HandshakePattern {
         &[],
         &[],
         &[&[Token::E, Token::S]],
-        &[&[Token::E, Token::EE, Token::SE, Token::Ekem, Token::Skem]],
+        &[&[Token::Ekem, Token::Skem, Token::E, Token::EE, Token::SE]],
     )
 }
 
@@ -1194,7 +1289,7 @@ pub fn noise_hybrid_in() -> HandshakePattern {
 /// <- s
 /// ...
 /// -> skem, e, es, s, ss
-/// <- e, ee, se, ekem, skem
+/// <- ekem, skem, e, ee, se
 /// ```
 pub fn noise_hybrid_ik() -> HandshakePattern {
     HandshakePattern::new(
@@ -1202,13 +1297,13 @@ pub fn noise_hybrid_ik() -> HandshakePattern {
         &[],
         &[Token::S],
         &[&[Token::Skem, Token::E, Token::ES, Token::S, Token::SS]],
-        &[&[Token::E, Token::EE, Token::SE, Token::Ekem, Token::Skem]],
+        &[&[Token::Ekem, Token::Skem, Token::E, Token::EE, Token::SE]],
     )
 }
 
 /// ```text
 /// -> e, s
-/// <- e, ee, se, ekem, skem, s, es
+/// <- ekem, skem, e, ee, se, s, es
 /// -> skem
 /// ```
 pub fn noise_hybrid_ix() -> HandshakePattern {
@@ -1218,11 +1313,11 @@ pub fn noise_hybrid_ix() -> HandshakePattern {
         &[],
         &[&[Token::E, Token::S], &[Token::Skem]],
         &[&[
+            Token::Ekem,
+            Token::Skem,
             Token::E,
             Token::EE,
             Token::SE,
-            Token::Ekem,
-            Token::Skem,
             Token::S,
             Token::ES,
         ]],
@@ -1233,7 +1328,7 @@ pub fn noise_hybrid_ix() -> HandshakePattern {
 
 /// ```text
 /// -> psk, e
-/// <- e, ee, ekem
+/// <- ekem, e, ee
 /// ```
 pub fn noise_hybrid_nn_psk0() -> HandshakePattern {
     noise_hybrid_nn().add_psks(&[0], "hybridNNpsk0")
@@ -1241,7 +1336,7 @@ pub fn noise_hybrid_nn_psk0() -> HandshakePattern {
 
 /// ```text
 /// -> e
-/// <- e, ee, ekem, psk
+/// <- ekem, e, ee, psk
 /// ```
 pub fn noise_hybrid_nn_psk2() -> HandshakePattern {
     noise_hybrid_nn().add_psks(&[2], "hybridNNpsk2")
@@ -1250,18 +1345,8 @@ pub fn noise_hybrid_nn_psk2() -> HandshakePattern {
 /// ```text
 /// <- s
 /// ...
-/// -> psk, e, es, skem
-/// <- e, ee, ekem
-/// ```
-pub fn noise_hybrid_nk_psk0() -> HandshakePattern {
-    noise_hybrid_nk().add_psks(&[0], "hybridNKpsk0")
-}
-
-/// ```text
-/// <- s
-/// ...
-/// -> e, es, skem
-/// <- e, ee, ekem, psk
+/// -> skem, e, es
+/// <- ekem, e, ee, psk
 /// ```
 pub fn noise_hybrid_nk_psk2() -> HandshakePattern {
     noise_hybrid_nk().add_psks(&[2], "hybridNKpsk2")
@@ -1269,8 +1354,8 @@ pub fn noise_hybrid_nk_psk2() -> HandshakePattern {
 
 /// ```text
 /// -> e
-/// <- e, ee, ekem, s, es, psk
-/// -> se, skem
+/// <- ekem, e, ee, s, es, psk
+/// -> skem
 /// ```
 pub fn noise_hybrid_nx_psk2() -> HandshakePattern {
     noise_hybrid_nx().add_psks(&[2], "hybridNXpsk2")
@@ -1278,9 +1363,8 @@ pub fn noise_hybrid_nx_psk2() -> HandshakePattern {
 
 /// ```text
 /// -> e
-/// <- e, ee, ekem
-/// -> s, se, skem, psk
-/// <- skem
+/// <- ekem, e, ee, s, es
+/// -> skem, psk
 /// ```
 pub fn noise_hybrid_xn_psk3() -> HandshakePattern {
     noise_hybrid_xn().add_psks(&[3], "hybridXNpsk3")
@@ -1289,9 +1373,9 @@ pub fn noise_hybrid_xn_psk3() -> HandshakePattern {
 /// ```text
 /// <- s
 /// ...
-/// -> e, es, skem
-/// <- e, ee, ekem
-/// -> s, se, skem, psk
+/// -> skem, e, es
+/// <- ekem, e, ee
+/// -> s, se, psk
 /// <- skem
 /// ```
 pub fn noise_hybrid_xk_psk3() -> HandshakePattern {
@@ -1300,8 +1384,8 @@ pub fn noise_hybrid_xk_psk3() -> HandshakePattern {
 
 /// ```text
 /// -> e
-/// <- e, ee, ekem, s, es
-/// -> se, skem, s, ss, psk
+/// <- ekem, e, ee, s, es
+/// -> skem, s, se, psk
 /// <- skem
 /// ```
 pub fn noise_hybrid_xx_psk3() -> HandshakePattern {
@@ -1312,7 +1396,7 @@ pub fn noise_hybrid_xx_psk3() -> HandshakePattern {
 /// -> s
 /// ...
 /// -> psk, e
-/// <- e, ee, ekem, se, skem
+/// <- ekem, skem, e, ee, se
 /// ```
 pub fn noise_hybrid_kn_psk0() -> HandshakePattern {
     noise_hybrid_kn().add_psks(&[0], "hybridKNpsk0")
@@ -1322,7 +1406,7 @@ pub fn noise_hybrid_kn_psk0() -> HandshakePattern {
 /// -> s
 /// ...
 /// -> e
-/// <- e, ee, ekem, se, skem, psk
+/// <- ekem, skem, e, ee, se, psk
 /// ```
 pub fn noise_hybrid_kn_psk2() -> HandshakePattern {
     noise_hybrid_kn().add_psks(&[2], "hybridKNpsk2")
@@ -1332,19 +1416,8 @@ pub fn noise_hybrid_kn_psk2() -> HandshakePattern {
 /// -> s
 /// <- s
 /// ...
-/// -> psk, e, es, ss, skem
-/// <- e, ee, ekem, se, skem
-/// ```
-pub fn noise_hybrid_kk_psk0() -> HandshakePattern {
-    noise_hybrid_kk().add_psks(&[0], "hybridKKpsk0")
-}
-
-/// ```text
-/// -> s
-/// <- s
-/// ...
-/// -> e, es, ss, skem
-/// <- e, ee, ekem, se, skem, psk
+/// -> skem, e, es, ss
+/// <- ekem, skem, e, ee, se, psk
 /// ```
 pub fn noise_hybrid_kk_psk2() -> HandshakePattern {
     noise_hybrid_kk().add_psks(&[2], "hybridKKpsk2")
@@ -1354,8 +1427,8 @@ pub fn noise_hybrid_kk_psk2() -> HandshakePattern {
 /// -> s
 /// ...
 /// -> e
-/// <- e, ee, ekem, se, skem, s, es, psk
-/// -> ss, skem
+/// <- ekem, skem, e, ee, se, s, es, psk
+/// -> skem
 /// ```
 pub fn noise_hybrid_kx_psk2() -> HandshakePattern {
     noise_hybrid_kx().add_psks(&[2], "hybridKXpsk2")
@@ -1363,7 +1436,7 @@ pub fn noise_hybrid_kx_psk2() -> HandshakePattern {
 
 /// ```text
 /// -> e, s, psk
-/// <- e, ee, ekem, se, skem
+/// <- ekem, skem, e, ee, se
 /// ```
 pub fn noise_hybrid_in_psk1() -> HandshakePattern {
     noise_hybrid_in().add_psks(&[1], "hybridINpsk1")
@@ -1371,7 +1444,7 @@ pub fn noise_hybrid_in_psk1() -> HandshakePattern {
 
 /// ```text
 /// -> e, s
-/// <- e, ee, ekem, se, skem, psk
+/// <- ekem, skem, e, ee, se, psk
 /// ```
 pub fn noise_hybrid_in_psk2() -> HandshakePattern {
     noise_hybrid_in().add_psks(&[2], "hybridINpsk2")
@@ -1380,8 +1453,8 @@ pub fn noise_hybrid_in_psk2() -> HandshakePattern {
 /// ```text
 /// <- s
 /// ...
-/// -> e, es, s, ss, skem, psk
-/// <- e, ee, ekem, se, skem
+/// -> skem, e, es, s, ss, psk
+/// <- ekem, skem, e, ee, se
 /// ```
 pub fn noise_hybrid_ik_psk1() -> HandshakePattern {
     noise_hybrid_ik().add_psks(&[1], "hybridIKpsk1")
@@ -1390,8 +1463,8 @@ pub fn noise_hybrid_ik_psk1() -> HandshakePattern {
 /// ```text
 /// <- s
 /// ...
-/// -> e, es, s, ss, skem
-/// <- e, ee, ekem, se, skem, psk
+/// -> skem, e, es, s, ss
+/// <- ekem, skem, e, ee, se, psk
 /// ```
 pub fn noise_hybrid_ik_psk2() -> HandshakePattern {
     noise_hybrid_ik().add_psks(&[2], "hybridIKpsk2")
@@ -1399,8 +1472,8 @@ pub fn noise_hybrid_ik_psk2() -> HandshakePattern {
 
 /// ```text
 /// -> e, s
-/// <- e, ee, ekem, se, skem, s, es, psk
-/// -> ss, skem
+/// <- ekem, skem, e, ee, se, s, es, psk
+/// -> skem
 /// ```
 pub fn noise_hybrid_ix_psk2() -> HandshakePattern {
     noise_hybrid_ix().add_psks(&[2], "hybridIXpsk2")
@@ -1469,5 +1542,152 @@ mod tests {
             ]],
             &[],
         );
+    }
+
+    // PSK validity rule tests
+    #[test]
+    fn psk_validity_e_before_psk() {
+        // E before PSK is valid
+        let result = HandshakePattern::try_new(
+            "test",
+            &[],
+            &[],
+            &[&[Token::E, Token::Psk]],
+            &[&[Token::E, Token::EE]],
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn psk_validity_e_after_psk() {
+        // E after PSK is valid
+        let result = HandshakePattern::try_new(
+            "test",
+            &[],
+            &[],
+            &[&[Token::Psk, Token::E]],
+            &[&[Token::E, Token::EE]],
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn psk_validity_ekem_after_psk() {
+        // Ekem after PSK is valid
+        let result = HandshakePattern::try_new(
+            "test",
+            &[],
+            &[],
+            &[&[Token::Psk, Token::Ekem]],
+            &[&[Token::Ekem]],
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn psk_validity_skem_before_psk() {
+        // Skem before PSK is valid (applies randomness before encryption)
+        let result = HandshakePattern::try_new(
+            "test",
+            &[],
+            &[],
+            &[&[Token::Skem, Token::Psk]],
+            &[&[Token::Ekem]],
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn psk_validity_violation_s_after_psk() {
+        // S after PSK without E/Ekem is invalid
+        let result = HandshakePattern::try_new(
+            "test",
+            &[],
+            &[],
+            &[&[Token::Psk, Token::S]],
+            &[&[Token::E, Token::EE]],
+        );
+        assert!(matches!(
+            result,
+            Err(crate::error::PatternError::PskValidityViolation)
+        ));
+    }
+
+    #[test]
+    fn psk_validity_violation_skem_after_psk() {
+        // Skem after PSK is invalid (encrypts before applying randomness)
+        let result = HandshakePattern::try_new(
+            "test",
+            &[],
+            &[],
+            &[&[Token::Psk, Token::Skem]],
+            &[&[Token::Ekem]],
+        );
+        assert!(matches!(
+            result,
+            Err(crate::error::PatternError::PskValidityViolation)
+        ));
+    }
+
+    // PQ token ordering rule tests
+    #[test]
+    fn pq_token_order_valid() {
+        // Valid: ekem before skem before public keys
+        let result = HandshakePattern::try_new(
+            "test",
+            &[],
+            &[],
+            &[&[Token::Ekem, Token::Skem, Token::E]],
+            &[&[Token::Ekem]],
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn pq_token_order_violation_ekem_after_skem() {
+        // Invalid: ekem must come before skem
+        let result = HandshakePattern::try_new(
+            "test",
+            &[],
+            &[],
+            &[&[Token::Skem, Token::Ekem]],
+            &[&[Token::Ekem]],
+        );
+        assert!(matches!(
+            result,
+            Err(crate::error::PatternError::PqTokenOrderViolation)
+        ));
+    }
+
+    #[test]
+    fn pq_token_order_violation_ekem_after_public_key() {
+        // Invalid: ekem must come before public keys
+        let result = HandshakePattern::try_new(
+            "test",
+            &[],
+            &[],
+            &[&[Token::E, Token::Ekem]],
+            &[&[Token::Ekem]],
+        );
+        assert!(matches!(
+            result,
+            Err(crate::error::PatternError::PqTokenOrderViolation)
+        ));
+    }
+
+    #[test]
+    fn pq_token_order_violation_skem_after_public_key() {
+        // Invalid: skem must come before public keys
+        let result = HandshakePattern::try_new(
+            "test",
+            &[],
+            &[],
+            &[&[Token::E, Token::Skem]],
+            &[&[Token::Ekem]],
+        );
+        assert!(matches!(
+            result,
+            Err(crate::error::PatternError::PqTokenOrderViolation)
+        ));
     }
 }

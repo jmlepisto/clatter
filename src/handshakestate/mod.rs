@@ -4,7 +4,7 @@ use zeroize::Zeroize;
 use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;
 use crate::constants::{MAX_PSKS, PSK_LEN};
-use crate::error::{CipherResult, HandshakeError, HandshakeResult};
+use crate::error::{CipherResult, HandshakeError, HandshakeResult, PatternError};
 use crate::handshakepattern::{HandshakePattern, Token};
 use crate::symmetricstate::SymmetricState;
 use crate::traits::{Cipher, Hash, Rng};
@@ -52,6 +52,8 @@ where
     responder_pattern_index: usize,
     psks: ArrayVec<[u8; PSK_LEN], MAX_PSKS>,
     rng: RNG,
+    psk_applied: bool,
+    own_randomness_applied: bool,
 }
 
 impl<C, H, RNG, K, P, EK, EP> HandshakeInternals<C, H, RNG, K, P, EK, EP>
@@ -119,5 +121,13 @@ where
 
     fn push_psk(&mut self, psk: &[u8]) {
         self.psks.push(ByteArray::from_slice(psk));
+    }
+
+    fn psk_validity_check(&self) -> HandshakeResult<()> {
+        if self.psk_applied && !self.own_randomness_applied {
+            Err(PatternError::PskValidityViolation.into())
+        } else {
+            Ok(())
+        }
     }
 }
