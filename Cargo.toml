@@ -54,13 +54,22 @@ std = [
     "getrandom",
 ]
 
+core = [
+    "use-aes-gcm",
+    "use-chacha20poly1305",
+    "use-sha",
+    "use-blake2",
+    "use-25519",
+    "use-rust-crypto-ml-kem",
+]
+
 getrandom = ["dep:getrandom"]
 
 use-sha = ["sha2"]
 use-blake2 = ["blake2"]
 use-aes-gcm = ["aes-gcm"]
 use-chacha20poly1305 = ["chacha20poly1305"]
-use-pqclean-ml-kem = ["pqcrypto-mlkem", "pqcrypto-traits"]
+use-pqclean-ml-kem = ["pqcrypto-mlkem", "pqcrypto-traits", "getrandom"]
 use-rust-crypto-ml-kem = ["ml-kem"]
 use-25519 = ["x25519-dalek"]
 

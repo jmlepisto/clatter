@@ -68,7 +68,7 @@
 //! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing                    | yes       |                                                                   |
 //! | `use-blake2`              | Enable BLAKE2 hashing                                 | yes       |                                                                   |
 //! | `use-rust-crypto-ml-kem`  | Enable ML-KEM (Kyber) KEMs by RustCrypto              | yes       |                                                                   |
-//! | `use-pqclean-ml-kem`      | Enable ML-KEM (Kyber) KEMs by PQClean                 | yes       |                                                                   |
+//! | `use-pqclean-ml-kem`      | Enable ML-KEM (Kyber) KEMs by PQClean                 | yes       | Requires `getrandom`                                              |
 //! | `std`                     | Enable standard library support                       | yes       | Enables `std` for supported dependencies                          |
 //! | `alloc`                   | Enable allocator support                              | yes       | Enables dynamically sized buffer types in [`crate::bytearray`]    |
 //! | `getrandom`               | Enable automatic system RNG support via [`getrandom`] | yes       | Can be used without `std`                                         |

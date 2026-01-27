@@ -54,3 +54,15 @@ jobs:
 
       - name: Audit
         run: cargo audit
+
+  no_std_check:
+    name: Verify no_std compatibility on thumbv7em-none-eabihf reference target
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install thumbv7em-none-eabihf reference target
+        run: rustup target add thumbv7em-none-eabihf
+
+      - name: Check
+        run: cargo check --no-default-features --features=core --target thumbv7em-none-eabihf
