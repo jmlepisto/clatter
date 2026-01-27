@@ -400,6 +400,7 @@ where
                     } else {
                         return Err(HandshakeError::PskMissing);
                     }
+                    self.internals.psk_applied = true;
                 }
                 Token::Ekem => {
                     let ct = get(EKEM::Ct::len());

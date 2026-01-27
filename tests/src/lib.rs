@@ -118,7 +118,6 @@ pub fn verify_handshake<A: Handshaker<C, H>, B: Handshaker<C, H>, C: Cipher, H: 
     mut alice: A,
     mut bob: B,
 ) {
-
     let mut alice_buf = [0u8; 8182];
     let mut bob_buf = [0u8; 8182];
 

@@ -388,6 +388,7 @@ where
                     } else {
                         return Err(HandshakeError::PskMissing);
                     }
+                    self.internals.psk_applied = true;
                 }
                 t @ (Token::EE | Token::ES | Token::SE | Token::SS) => {
                     let dh_result = self.map_dh(t)?;

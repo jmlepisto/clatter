@@ -340,6 +340,10 @@ impl HandshakePattern {
     ///
     /// PSK placement is identical to the one defined in the Noise spec. To
     /// include PSK0 and PSK2 in a pattern, pass in `psks = [0, 2]`.
+    ///
+    /// # Panics
+    /// * If the resulting pattern violates the PSK validity rule (Noise Protocol Framework Specification section 9.3)
+    /// * If the resulting pattern violates the PQ token ordering rule (PQNoise paper section 2.4)
     pub fn add_psks(&self, psks: &[usize], name: &'static str) -> Self {
         let mut initiator = self.message_pattern.initiator.clone();
         let mut responder = self.message_pattern.responder.clone();
@@ -357,17 +361,19 @@ impl HandshakePattern {
             }
         }
 
-        Self {
+        let initiator_slices: ArrayVec<&[Token], MAX_HS_MESSAGES_PER_ROLE> =
+            initiator.iter().map(|v| v.as_slice()).collect();
+        let responder_slices: ArrayVec<&[Token], MAX_HS_MESSAGES_PER_ROLE> =
+            responder.iter().map(|v| v.as_slice()).collect();
+
+        Self::try_new(
             name,
-            hs_type: self.hs_type,
-            has_psk: true,
-            pre_initiator: self.pre_initiator.clone(),
-            pre_responder: self.pre_responder.clone(),
-            message_pattern: MessagePattern {
-                initiator,
-                responder,
-            },
-        }
+            self.pre_initiator.as_slice(),
+            self.pre_responder.as_slice(),
+            &initiator_slices,
+            &responder_slices,
+        )
+        .unwrap_or_else(|e| panic!("Handshake pattern error in add_psks: {}", e))
     }
 }
 
@@ -1689,5 +1695,64 @@ mod tests {
             result,
             Err(crate::error::PatternError::PqTokenOrderViolation)
         ));
+    }
+
+    // Tests for add_psks validation
+    #[test]
+    #[should_panic(expected = "PSK validity rule violation")]
+    fn add_psks_psk_validity_violation_skem_after_psk() {
+        // This test verifies that add_psks validates PSK validity rule
+        // Creating a pattern with Skem, then adding PSK at position 0
+        // should fail because PSK comes before Skem without E/Ekem
+        let pattern = HandshakePattern::new("test", &[], &[], &[&[Token::Skem]], &[&[Token::Ekem]]);
+        // Adding PSK at position 0 (first message, first token) creates [Psk, Skem]
+        // which violates PSK validity rule: Skem encrypts data after PSK without E/Ekem
+        let _ = pattern.add_psks(&[0], "invalid");
+    }
+
+    #[test]
+    #[should_panic(expected = "PSK validity rule violation")]
+    fn add_psks_psk_validity_violation_s_after_psk() {
+        // This test verifies that add_psks validates PSK validity rule
+        // Creating a pattern with S, then adding PSK at position 0
+        // should fail because PSK comes before S without E/Ekem
+        let pattern =
+            HandshakePattern::new("test", &[], &[], &[&[Token::S]], &[&[Token::E, Token::EE]]);
+        // Adding PSK at position 0 creates [Psk, S]
+        // which violates PSK validity rule: S encrypts data after PSK without E/Ekem
+        let _ = pattern.add_psks(&[0], "invalid");
+    }
+
+    #[test]
+    fn add_psks_psk_validity_ok_with_e_before() {
+        // Valid: E before PSK
+        let pattern =
+            HandshakePattern::new("test", &[], &[], &[&[Token::E]], &[&[Token::E, Token::EE]]);
+        // Adding PSK at position 1 (after E) creates [E, Psk] which is valid
+        let result = pattern.add_psks(&[1], "valid");
+        assert!(result.has_psk());
+    }
+
+    #[test]
+    fn add_psks_psk_validity_ok_with_e_after() {
+        // Valid: E after PSK
+        let pattern =
+            HandshakePattern::new("test", &[], &[], &[&[Token::E]], &[&[Token::E, Token::EE]]);
+        // Adding PSK at position 0 (before E) creates [Psk, E] which is valid
+        let result = pattern.add_psks(&[0], "valid");
+        assert!(result.has_psk());
+    }
+
+    #[test]
+    fn add_psks_validates_full_pattern() {
+        // This test verifies that add_psks calls try_new which validates
+        // the entire pattern, including PQ token ordering if applicable.
+        // Since PSK placement doesn't typically affect ekem/skem ordering,
+        // we verify that add_psks works correctly on valid patterns.
+        let pattern = HandshakePattern::new("test", &[], &[], &[&[Token::Ekem]], &[&[Token::Ekem]]);
+        // Adding PSK should work and the resulting pattern should be valid
+        let result = pattern.add_psks(&[0], "valid");
+        assert!(result.has_psk());
+        assert_eq!(result.get_type(), HandshakeType::KEM);
     }
 }
