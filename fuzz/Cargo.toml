@@ -13,7 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 libfuzzer-sys = "0.4"
-rand = "0.8.5"
+rand = "0.9.3"
 
 [dependencies.clatter]
 path = ".."
