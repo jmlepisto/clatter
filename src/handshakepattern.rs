@@ -267,9 +267,6 @@ impl HandshakePattern {
                     Token::S if psk_sent => {
                         return Err(PatternError::PskValidityViolation);
                     }
-                    Token::S => {
-                        // S does not apply randomness, continue validation...
-                    }
                     _ => {}
                 }
             }
