@@ -68,6 +68,7 @@
 //! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing                    | yes       |                                                                   |
 //! | `use-blake2`              | Enable BLAKE2 hashing                                 | yes       |                                                                   |
 //! | `use-rust-crypto-ml-kem`  | Enable ML-KEM (Kyber) KEMs by RustCrypto              | yes       |                                                                   |
+//! | `use-pqclean-ml-kem`      | Enable deprecated ML-KEM (Kyber) KEMs by PQClean      | yes       | Deprecated: prefer `use-rust-crypto-ml-kem`                        |
 //! | `std`                     | Enable standard library support                       | yes       | Enables `std` for supported dependencies                          |
 //! | `alloc`                   | Enable allocator support                              | yes       | Enables dynamically sized buffer types in [`crate::bytearray`]    |
 //! | `getrandom`               | Enable automatic system RNG support via [`getrandom`] | yes       | Can be used without `std`                                         |
@@ -190,6 +191,14 @@ pub mod crypto {
 
     /// Supported KEMs
     pub mod kem {
+        #[cfg_attr(docsrs, doc(cfg(feature = "use-pqclean-ml-kem")))]
+        #[cfg(feature = "use-pqclean-ml-kem")]
+        #[allow(deprecated)]
+        #[deprecated(
+            since = "2.3.0",
+            note = "PQClean ML-KEM is deprecated and will be removed in a future release. Prefer the RustCrypto ML-KEM implementation."
+        )]
+        pub use crate::crypto_impl::pqclean_ml_kem;
         #[cfg_attr(docsrs, doc(cfg(feature = "use-rust-crypto-ml-kem")))]
         #[cfg(feature = "use-rust-crypto-ml-kem")]
         pub use crate::crypto_impl::rust_crypto_ml_kem;
