@@ -156,8 +156,6 @@ impl<C: Cipher> CipherState<C> {
 
 #[cfg(test)]
 mod tests {
-    use core::u64;
-
     use super::CipherState;
     use crate::crypto::cipher::{AesGcm, ChaChaPoly};
     use crate::traits::Cipher;

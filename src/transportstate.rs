@@ -472,9 +472,9 @@ mod tests {
         // Create a one-way handshake (N pattern)
         // N pattern: <- s (responder's static key is known to initiator)
         let pattern = crate::handshakepattern::noise_n();
-        let mut rng = crate::crypto::rng::DefaultRng::default();
+        let mut rng = crate::crypto::rng::DefaultRng;
         let bob_static = crate::crypto::dh::X25519::genkey_rng(&mut rng).unwrap();
-        let bob_static_pub = bob_static.public.clone();
+        let bob_static_pub = bob_static.public;
         let mut alice = NqHandshakeCore::<
             crate::crypto::dh::X25519,
             ChaChaPoly,
@@ -519,9 +519,9 @@ mod tests {
         // Create a one-way handshake (N pattern)
         // N pattern: <- s (responder's static key is known to initiator)
         let pattern = crate::handshakepattern::noise_n();
-        let mut rng = crate::crypto::rng::DefaultRng::default();
+        let mut rng = crate::crypto::rng::DefaultRng;
         let bob_static = crate::crypto::dh::X25519::genkey_rng(&mut rng).unwrap();
-        let bob_static_pub = bob_static.public.clone();
+        let bob_static_pub = bob_static.public;
         let mut alice = NqHandshakeCore::<
             crate::crypto::dh::X25519,
             ChaChaPoly,

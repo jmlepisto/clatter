@@ -68,7 +68,6 @@
 //! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing                    | yes       |                                                                   |
 //! | `use-blake2`              | Enable BLAKE2 hashing                                 | yes       |                                                                   |
 //! | `use-rust-crypto-ml-kem`  | Enable ML-KEM (Kyber) KEMs by RustCrypto              | yes       |                                                                   |
-//! | `use-pqclean-ml-kem`      | Enable ML-KEM (Kyber) KEMs by PQClean                 | yes       | Requires `getrandom`                                              |
 //! | `std`                     | Enable standard library support                       | yes       | Enables `std` for supported dependencies                          |
 //! | `alloc`                   | Enable allocator support                              | yes       | Enables dynamically sized buffer types in [`crate::bytearray`]    |
 //! | `getrandom`               | Enable automatic system RNG support via [`getrandom`] | yes       | Can be used without `std`                                         |
@@ -81,9 +80,7 @@
 //! ```rust
 //! use clatter::crypto::cipher::ChaChaPoly;
 //! use clatter::crypto::hash::Sha512;
-//! use clatter::crypto::kem::pqclean_ml_kem::MlKem1024;
-//! // We can mix and match KEMs from different vendors
-//! use clatter::crypto::kem::rust_crypto_ml_kem::MlKem512;
+//! use clatter::crypto::kem::rust_crypto_ml_kem::{MlKem1024, MlKem512};
 //! use clatter::handshakepattern::noise_pqnn;
 //! use clatter::traits::Handshaker;
 //! use clatter::PqHandshake;
@@ -193,9 +190,6 @@ pub mod crypto {
 
     /// Supported KEMs
     pub mod kem {
-        #[cfg_attr(docsrs, doc(cfg(feature = "use-pqclean-ml-kem")))]
-        #[cfg(feature = "use-pqclean-ml-kem")]
-        pub use crate::crypto_impl::pqclean_ml_kem;
         #[cfg_attr(docsrs, doc(cfg(feature = "use-rust-crypto-ml-kem")))]
         #[cfg(feature = "use-rust-crypto-ml-kem")]
         pub use crate::crypto_impl::rust_crypto_ml_kem;
