@@ -1,6 +1,7 @@
 use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
 use clatter::crypto::dh::X25519;
 use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
+use clatter::crypto::hazmat::rust_crypto_hqc_kem;
 use clatter::crypto::kem::rust_crypto_ml_kem;
 use clatter::handshakepattern::*;
 use clatter::traits::{Cipher, Dh, Hash, Kem};
@@ -11,6 +12,7 @@ use clatter::{
 
 use crate::{
     hybrid_handshake_patterns, nq_handshake_patterns, pq_handshake_patterns, verify_handshake,
+    TEST_MESSAGE_BUF_LEN,
 };
 
 const PSKS: &[[u8; 32]] = &[[0; 32], [1; 32], [2; 32], [3; 32]];
@@ -58,6 +60,15 @@ fn smoke_pq_handshakes() {
         cipher_hash_combos::<rust_crypto_ml_kem::MlKem1024, rust_crypto_ml_kem::MlKem1024>(
             pattern.clone(),
         );
+        cipher_hash_combos::<rust_crypto_hqc_kem::Hqc128, rust_crypto_hqc_kem::Hqc128>(
+            pattern.clone(),
+        );
+        cipher_hash_combos::<rust_crypto_hqc_kem::Hqc192, rust_crypto_hqc_kem::Hqc192>(
+            pattern.clone(),
+        );
+        cipher_hash_combos::<rust_crypto_hqc_kem::Hqc256, rust_crypto_hqc_kem::Hqc256>(
+            pattern.clone(),
+        );
     }
 }
 
@@ -85,6 +96,15 @@ fn smoke_hybrid_handshakes() {
             pattern.clone(),
         );
         cipher_hash_combos::<X25519, rust_crypto_ml_kem::MlKem1024, rust_crypto_ml_kem::MlKem1024>(
+            pattern.clone(),
+        );
+        cipher_hash_combos::<X25519, rust_crypto_hqc_kem::Hqc128, rust_crypto_hqc_kem::Hqc128>(
+            pattern.clone(),
+        );
+        cipher_hash_combos::<X25519, rust_crypto_hqc_kem::Hqc192, rust_crypto_hqc_kem::Hqc192>(
+            pattern.clone(),
+        );
+        cipher_hash_combos::<X25519, rust_crypto_hqc_kem::Hqc256, rust_crypto_hqc_kem::Hqc256>(
             pattern.clone(),
         );
     }
@@ -139,7 +159,6 @@ fn smoke_dual_layer_handshakes() {
             continue;
         }
         for pq in &pq_handshakes {
-            // Rust crypto
             cipher_hash_combos::<rust_crypto_ml_kem::MlKem512, rust_crypto_ml_kem::MlKem512, X25519>(
                 nq.clone(),
                 pq.clone(),
@@ -153,6 +172,18 @@ fn smoke_dual_layer_handshakes() {
                 rust_crypto_ml_kem::MlKem1024,
                 X25519,
             >(nq.clone(), pq.clone());
+            cipher_hash_combos::<rust_crypto_hqc_kem::Hqc128, rust_crypto_hqc_kem::Hqc128, X25519>(
+                nq.clone(),
+                pq.clone(),
+            );
+            cipher_hash_combos::<rust_crypto_hqc_kem::Hqc192, rust_crypto_hqc_kem::Hqc192, X25519>(
+                nq.clone(),
+                pq.clone(),
+            );
+            cipher_hash_combos::<rust_crypto_hqc_kem::Hqc256, rust_crypto_hqc_kem::Hqc256, X25519>(
+                nq.clone(),
+                pq.clone(),
+            );
         }
     }
 }
@@ -234,13 +265,22 @@ fn dual_layer_handshakes<EKEM: Kem, SKEM: Kem, DH: Dh, C: Cipher, H: Hash>(
     }
 
     // -- Prepare and verify dual layer handshakes --
-    let alice = DualLayerHandshake::<_, _, _, _, 8182>::new(alice_nq.clone(), alice_pq.clone());
-    let bob = DualLayerHandshake::<_, _, _, _, 8182>::new(bob_nq.clone(), bob_pq.clone());
+    let alice = DualLayerHandshake::<_, _, _, _, TEST_MESSAGE_BUF_LEN>::new(
+        alice_nq.clone(),
+        alice_pq.clone(),
+    );
+    let bob =
+        DualLayerHandshake::<_, _, _, _, TEST_MESSAGE_BUF_LEN>::new(bob_nq.clone(), bob_pq.clone());
     verify_handshake(alice, bob);
 
-    let alice =
-        HybridDualLayerHandshake::<_, _, _, _, 8182>::new(alice_nq.clone(), alice_pq.clone());
-    let bob = HybridDualLayerHandshake::<_, _, _, _, 8182>::new(bob_nq.clone(), bob_pq.clone());
+    let alice = HybridDualLayerHandshake::<_, _, _, _, TEST_MESSAGE_BUF_LEN>::new(
+        alice_nq.clone(),
+        alice_pq.clone(),
+    );
+    let bob = HybridDualLayerHandshake::<_, _, _, _, TEST_MESSAGE_BUF_LEN>::new(
+        bob_nq.clone(),
+        bob_pq.clone(),
+    );
     verify_handshake(alice, bob);
 }
 
