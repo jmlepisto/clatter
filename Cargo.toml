@@ -50,7 +50,7 @@ std = [
     "aes-gcm/std",
     "chacha20poly1305/std",
     "ml-kem/std",
-    "hqc-kem/std",
+    "hqc-kem?/std",
     "zeroize/std",
     "getrandom",
 ]

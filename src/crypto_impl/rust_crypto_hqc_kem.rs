@@ -122,7 +122,7 @@ impl_hqc_kem!(Hqc128, Hqc128Params, hqc128, 16);
 impl_hqc_kem!(Hqc192, Hqc192Params, hqc192, 24);
 impl_hqc_kem!(Hqc256, Hqc256Params, hqc256, 32);
 
-#[cfg(test)]
+#[cfg(all(test, feature = "getrandom"))]
 mod tests {
     use super::{Hqc128, Hqc192, Hqc256};
     use crate::bytearray::ByteArray;

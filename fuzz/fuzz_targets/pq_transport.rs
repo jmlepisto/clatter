@@ -26,7 +26,7 @@ fuzz_target!(|data: &[u8]| {
     verify_with::<Hqc256, Hqc128, ChaChaPoly, Sha256>(data);
     verify_with::<Hqc256, Hqc128, ChaChaPoly, Sha512>(data);
     verify_with::<Hqc256, Hqc128, ChaChaPoly, Blake2b>(data);
-    verify_with::<Hqc256, Hqc128, ChaChaPoly, Blake2b>(data);
+    verify_with::<Hqc256, Hqc128, ChaChaPoly, Blake2s>(data);
 });
 
 fn verify_with<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(data: &[u8]) {

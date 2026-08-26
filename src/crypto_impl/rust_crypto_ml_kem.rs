@@ -102,7 +102,7 @@ impl_ml_kem!(MlKem512, MlKem512Params, 1632, 800, 768);
 impl_ml_kem!(MlKem768, MlKem768Params, 2400, 1184, 1088);
 impl_ml_kem!(MlKem1024, MlKem1024Params, 3168, 1568, 1568);
 
-#[cfg(test)]
+#[cfg(all(test, feature = "getrandom"))]
 mod tests {
     use super::{MlKem1024, MlKem512, MlKem768};
     use crate::bytearray::ByteArray;
