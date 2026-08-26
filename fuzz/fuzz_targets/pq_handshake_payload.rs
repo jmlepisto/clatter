@@ -3,8 +3,7 @@
 use clatter::constants::MAX_MESSAGE_LEN;
 use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
 use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
-use clatter::crypto::kem::pqclean_ml_kem::MlKem1024;
-use clatter::crypto::kem::rust_crypto_ml_kem::MlKem512;
+use clatter::crypto::kem::rust_crypto_ml_kem::{MlKem1024, MlKem512};
 use clatter::traits::{Cipher, Handshaker, Hash, Kem};
 use clatter_fuzz::{pq_handshake_patterns, setup_pq_handshake};
 use libfuzzer_sys::fuzz_target;
