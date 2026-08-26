@@ -1,8 +1,8 @@
 use x25519_dalek::{PublicKey, StaticSecret};
 
+use crate::KeyPair;
 use crate::bytearray::{ByteArray, SensitiveByteArray};
 use crate::traits::{CryptoComponent, Dh, Rng};
-use crate::KeyPair;
 
 /// X25519 DH implementation
 #[derive(Clone)]

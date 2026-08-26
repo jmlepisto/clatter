@@ -1,29 +1,29 @@
 //! HQC-KEM implementation by RustCrypto: https://github.com/RustCrypto/KEMs
 
 use hqc_kem::{
-    hqc128, hqc192, hqc256, Ciphertext as RustCryptoCiphertext,
-    DecapsulationKey as RustCryptoDecapsulationKey, EncapsulationKey as RustCryptoEncapsulationKey,
-    Hqc128Params, Hqc192Params, Hqc256Params, HqcKem as RustCryptoHqcKem,
+    Ciphertext as RustCryptoCiphertext, DecapsulationKey as RustCryptoDecapsulationKey,
+    EncapsulationKey as RustCryptoEncapsulationKey, Hqc128Params, Hqc192Params, Hqc256Params,
+    HqcKem as RustCryptoHqcKem, hqc128, hqc192, hqc256,
 };
 use zeroize::Zeroize;
 
+use crate::KeyPair;
 use crate::bytearray::{ByteArray, SensitiveByteArray};
 use crate::error::KemError;
 use crate::traits::{CryptoComponent, Kem, Rng};
-use crate::KeyPair;
 
 /// HQC-128 KEM implementation
-/// 
+///
 /// ⚠️ Hazmat: HQC standard is not yet finalized.
 #[derive(Clone)]
 pub struct Hqc128;
 /// HQC-192 KEM implementation
-/// 
+///
 /// ⚠️ Hazmat: HQC standard is not yet finalized.
 #[derive(Clone)]
 pub struct Hqc192;
 /// HQC-256 KEM implementation
-/// 
+///
 /// ⚠️ Hazmat: HQC standard is not yet finalized.
 #[derive(Clone)]
 pub struct Hqc256;
@@ -47,7 +47,7 @@ impl CryptoComponent for Hqc256 {
 }
 
 macro_rules! impl_hqc_kem {
-    ($hqc_kem:ty, $params:ty, $module:ident, $msg_len:expr) => {
+    ($hqc_kem:ty, $params:ty, $module:ident) => {
         impl Kem for $hqc_kem {
             #[cfg(feature = "alloc")]
             type SecretKey =
@@ -70,14 +70,11 @@ macro_rules! impl_hqc_kem {
             fn genkey_rng<R: Rng>(
                 rng: &mut R,
             ) -> crate::error::KemResult<KeyPair<Self::PubKey, Self::SecretKey>> {
-                let mut seed = [0u8; 32];
-                rng.fill_bytes(&mut seed);
-                let (ek, dk) = RustCryptoHqcKem::<$params>::generate_key_deterministic(&seed);
+                let (ek, dk) = RustCryptoHqcKem::<$params>::generate_key(rng);
                 let res = KeyPair {
                     public: Self::PubKey::from_slice(ek.as_ref()),
                     secret: Self::SecretKey::from_slice(dk.as_ref()),
                 };
-                seed.zeroize();
                 Ok(res)
             }
 
@@ -87,19 +84,11 @@ macro_rules! impl_hqc_kem {
             ) -> crate::error::KemResult<(Self::Ct, Self::Ss)> {
                 let ek = RustCryptoEncapsulationKey::<$params>::try_from(pk)
                     .map_err(|_| KemError::Input)?;
-                let mut message = [0u8; $msg_len];
-                let mut salt = [0u8; 16];
-                rng.fill_bytes(&mut message);
-                rng.fill_bytes(&mut salt);
-                let (ct, mut ss) = ek
-                    .encapsulate_deterministic(&message, &salt)
-                    .map_err(|_| KemError::Encapsulation)?;
+                let (ct, mut ss) = ek.encapsulate(rng);
                 let res = (
                     ByteArray::from_slice(ct.as_ref()),
                     SensitiveByteArray::from_slice(ss.as_ref()),
                 );
-                message.zeroize();
-                salt.zeroize();
                 ss.zeroize();
                 Ok(res)
             }
@@ -118,11 +107,11 @@ macro_rules! impl_hqc_kem {
     };
 }
 
-impl_hqc_kem!(Hqc128, Hqc128Params, hqc128, 16);
-impl_hqc_kem!(Hqc192, Hqc192Params, hqc192, 24);
-impl_hqc_kem!(Hqc256, Hqc256Params, hqc256, 32);
+impl_hqc_kem!(Hqc128, Hqc128Params, hqc128);
+impl_hqc_kem!(Hqc192, Hqc192Params, hqc192);
+impl_hqc_kem!(Hqc256, Hqc256Params, hqc256);
 
-#[cfg(all(test, feature = "getrandom"))]
+#[cfg(all(test, any(feature = "getrandom", feature = "rand")))]
 mod tests {
     use super::{Hqc128, Hqc192, Hqc256};
     use crate::bytearray::ByteArray;

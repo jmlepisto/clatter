@@ -1,6 +1,7 @@
 use core::ops::Deref;
 
-use aes_gcm::{AeadInPlace, KeyInit};
+use aes_gcm::KeyInit;
+use aes_gcm::aead::AeadInOut;
 
 use crate::bytearray::SensitiveByteArray;
 use crate::error::{CipherError, CipherResult};
@@ -43,9 +44,11 @@ impl Cipher for AesGcm {
         in_out: &mut [u8],
         plaintext_len: usize,
     ) -> CipherResult<usize> {
-        assert!(plaintext_len
-            .checked_add(Self::tag_len())
-            .is_some_and(|len| len <= in_out.len()));
+        assert!(
+            plaintext_len
+                .checked_add(Self::tag_len())
+                .is_some_and(|len| len <= in_out.len())
+        );
 
         let mut full_nonce = [0u8; 12];
         full_nonce[4..].copy_from_slice(&nonce.to_be_bytes());
@@ -54,7 +57,7 @@ impl Cipher for AesGcm {
         let (buffer, tag_out) = in_out[..out_len].split_at_mut(plaintext_len);
 
         let tag = aes_gcm::Aes256Gcm::new(k.deref().into())
-            .encrypt_in_place_detached(&full_nonce.into(), ad, buffer)
+            .encrypt_inout_detached(&full_nonce.into(), ad, buffer.into())
             .map_err(|_| CipherError::Encrypt)?;
 
         tag_out.copy_from_slice(&tag);
@@ -75,9 +78,10 @@ impl Cipher for AesGcm {
 
         out.copy_from_slice(&ciphertext[..out.len()]);
         let tag = &ciphertext[out.len()..];
+        let tag: &[u8; 16] = tag.try_into().expect("tag length");
 
         aes_gcm::Aes256Gcm::new(k.deref().into())
-            .decrypt_in_place_detached(&full_nonce.into(), ad, out, tag.into())
+            .decrypt_inout_detached(&full_nonce.into(), ad, out.into(), tag.into())
             .map_err(|_| CipherError::Decrypt)?;
 
         Ok(())
@@ -97,9 +101,10 @@ impl Cipher for AesGcm {
         full_nonce[4..].copy_from_slice(&nonce.to_be_bytes());
 
         let (buffer, tag) = in_out[..ciphertext_len].split_at_mut(ciphertext_len - 16);
+        let tag: &[u8; 16] = (&*tag).try_into().expect("tag length");
 
         aes_gcm::Aes256Gcm::new(k.deref().into())
-            .decrypt_in_place_detached(&full_nonce.into(), ad, buffer, tag.as_ref().into())
+            .decrypt_inout_detached(&full_nonce.into(), ad, buffer.into(), tag.into())
             .map_err(|_| CipherError::Decrypt)?;
 
         Ok(buffer.len())

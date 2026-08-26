@@ -1,6 +1,6 @@
 [package]
 name = "clatter"
-version = "2.3.0"
+version = "3.0.0"
 edition = "2024"
 rust-version = "1.85.0"
 license = "MIT"
@@ -38,21 +38,17 @@ default = [
     "use-sha", 
     "use-blake2",
     "use-25519",
-    "use-pqclean-ml-kem",
     "use-rust-crypto-ml-kem", 
 ]
 
 alloc = []
 std = [
     "alloc",
-    "sha2/std",
-    "blake2/std",
-    "aes-gcm/std",
-    "chacha20poly1305/std",
-    "ml-kem/std",
+    "sha2?/std",
+    "blake2?/std",
     "hqc-kem?/std",
     "zeroize/std",
-    "getrandom",
+    "rand",
 ]
 
 core = [
@@ -65,12 +61,12 @@ core = [
 ]
 
 getrandom = ["dep:getrandom"]
+rand = ["dep:rand"]
 
 use-sha = ["sha2"]
 use-blake2 = ["blake2"]
 use-aes-gcm = ["aes-gcm"]
 use-chacha20poly1305 = ["chacha20poly1305"]
-use-pqclean-ml-kem = ["dep:pqcrypto-mlkem", "dep:pqcrypto-traits", "getrandom"]
 use-rust-crypto-ml-kem = ["ml-kem"]
 use-rust-crypto-hqc-kem = ["hqc-kem"]
 use-25519 = ["x25519-dalek"]
@@ -84,25 +80,21 @@ rustdoc-args = ["--cfg", "docsrs"]
 [dependencies]
 # Mandatory
 arrayvec = { version = "0.7.6", default-features = false, features = ["zeroize"] }
-rand_core = "^0.6"
+rand_core = "0.10.1"
 zeroize = { version = "1.8.1", default-features = false, features = ["zeroize_derive"] }
 
 # Optional
-aes-gcm = { version = "0.10.3", default-features = false, features = ["aes"], optional = true }
+aes-gcm = { version = "0.11.1", default-features = false, features = ["aes"], optional = true }
 blake2 = { version = "0.10.6", default-features = false, optional = true }
-chacha20poly1305 = { version = "0.10.1", default-features = false, features = ["rand_core"], optional = true }
-ml-kem = { version = "0.2.1", default-features = false, features = ["zeroize"], optional = true }
+chacha20poly1305 = { version = "0.11.0", default-features = false, features = ["rand_core"], optional = true }
+ml-kem = { version = "0.3.2", default-features = false, features = ["zeroize"], optional = true }
 hqc-kem = { version = "0.1.0-rc.0", default-features = false, features = ["kgen", "ecap", "dcap"], optional = true }
 sha2 = { version = "0.10.9", default-features = false, optional = true }
 thiserror-no-std = { version = "2.0.2", default-features = false }
-x25519-dalek = { version = "2.0.1", default-features = false, features = ["static_secrets", "zeroize"], optional = true }
-pqcrypto-mlkem = { version = "0.1.1", default-features = false, optional = true }
-pqcrypto-traits = { version = "0.3.5", default-features = false, optional = true }
+x25519-dalek = { version = "3.0.0", default-features = false, features = ["static_secrets", "zeroize"], optional = true }
 displaydoc = { version = "0.2.5", default-features = false }
 getrandom = { version = "0.3.3", optional = true }
-
-[dev-dependencies]
-rand = "0.8.5"
+rand = { version = "0.10.2", default-features = false, features = ["thread_rng"], optional = true }
 
 [workspace]
 members = [

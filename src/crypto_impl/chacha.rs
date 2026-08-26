@@ -1,6 +1,7 @@
 use core::ops::Deref;
 
-use chacha20poly1305::{AeadInPlace, ChaCha20Poly1305, KeyInit};
+use chacha20poly1305::aead::AeadInOut;
+use chacha20poly1305::{ChaCha20Poly1305, KeyInit};
 
 use crate::bytearray::SensitiveByteArray;
 use crate::error::{CipherError, CipherResult};
@@ -39,9 +40,11 @@ impl Cipher for ChaChaPoly {
         in_out: &mut [u8],
         plaintext_len: usize,
     ) -> CipherResult<usize> {
-        assert!(plaintext_len
-            .checked_add(Self::tag_len())
-            .is_some_and(|len| len <= in_out.len()));
+        assert!(
+            plaintext_len
+                .checked_add(Self::tag_len())
+                .is_some_and(|len| len <= in_out.len())
+        );
 
         let mut full_nonce = [0u8; 12];
         full_nonce[4..].copy_from_slice(&nonce.to_le_bytes());
@@ -50,7 +53,7 @@ impl Cipher for ChaChaPoly {
         let (buffer, tag_out) = in_out[..out_len].split_at_mut(plaintext_len);
 
         let tag = ChaCha20Poly1305::new(k.deref().into())
-            .encrypt_in_place_detached(&full_nonce.into(), ad, buffer)
+            .encrypt_inout_detached(&full_nonce.into(), ad, buffer.into())
             .map_err(|_| CipherError::Encrypt)?;
 
         tag_out.copy_from_slice(&tag);
@@ -71,9 +74,10 @@ impl Cipher for ChaChaPoly {
 
         out.copy_from_slice(&ciphertext[..out.len()]);
         let tag = &ciphertext[out.len()..];
+        let tag: &[u8; 16] = tag.try_into().expect("tag length");
 
         ChaCha20Poly1305::new(k.deref().into())
-            .decrypt_in_place_detached(&full_nonce.into(), ad, out, tag.into())
+            .decrypt_inout_detached(&full_nonce.into(), ad, out.into(), tag.into())
             .map_err(|_| CipherError::Decrypt)?;
 
         Ok(())
@@ -93,9 +97,10 @@ impl Cipher for ChaChaPoly {
         full_nonce[4..].copy_from_slice(&nonce.to_le_bytes());
 
         let (buffer, tag) = in_out[..ciphertext_len].split_at_mut(ciphertext_len - Self::tag_len());
+        let tag: &[u8; 16] = (&*tag).try_into().expect("tag length");
 
         ChaCha20Poly1305::new(k.deref().into())
-            .decrypt_in_place_detached(&full_nonce.into(), ad, buffer, tag.as_ref().into())
+            .decrypt_inout_detached(&full_nonce.into(), ad, buffer.into(), tag.into())
             .map_err(|_| CipherError::Decrypt)?;
 
         Ok(buffer.len())

@@ -1,37 +1,57 @@
-use core::num::NonZeroU32;
+use core::convert::Infallible;
 
-use rand_core::{CryptoRng, RngCore};
+use rand_core::{TryCryptoRng, TryRng};
 
+#[cfg(all(feature = "getrandom", not(feature = "rand")))]
 const RNG_FAILURE_MSG: &str = "Clatter default RNG: system failure";
 
-/// Default system RNG provided by [`getrandom`]
+/// Default RNG source.
+///
+/// Uses [`rand::rng()`] (thread RNG) when the `rand` feature is enabled.
+#[cfg(feature = "rand")]
 #[derive(Default, Clone)]
-pub struct DefaultRng;
+pub struct DefaultRng(());
 
-impl RngCore for DefaultRng {
-    fn next_u32(&mut self) -> u32 {
-        getrandom::u32().expect(RNG_FAILURE_MSG)
+/// Default RNG source.
+///
+/// Uses [`getrandom`] directly when `getrandom` is enabled and `rand` is disabled.
+#[cfg(all(feature = "getrandom", not(feature = "rand")))]
+#[derive(Default, Clone)]
+pub struct DefaultRng(());
+
+#[cfg(feature = "rand")]
+impl TryRng for DefaultRng {
+    type Error = Infallible;
+
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+        rand::rng().try_next_u32()
     }
 
-    fn next_u64(&mut self) -> u64 {
-        getrandom::u64().expect(RNG_FAILURE_MSG)
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+        rand::rng().try_next_u64()
     }
 
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
-        getrandom::fill(dest).expect(RNG_FAILURE_MSG);
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Self::Error> {
+        rand::rng().try_fill_bytes(dest)
+    }
+}
+
+#[cfg(all(feature = "getrandom", not(feature = "rand")))]
+impl TryRng for DefaultRng {
+    type Error = Infallible;
+
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+        Ok(getrandom::u32().expect(RNG_FAILURE_MSG))
     }
 
-    /// Fill dest entirely with random data
-    ///
-    /// Returns the encapsulated raw system error code or -1 ([`u32::MAX`]) if error code is not available.
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
-        getrandom::fill(dest).map_err(|e| {
-            let raw_err = e.raw_os_error().unwrap_or(-1) as u32;
-            let errno = NonZeroU32::new(raw_err).unwrap_or(NonZeroU32::new(u32::MAX).unwrap());
-            rand_core::Error::from(errno)
-        })
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+        Ok(getrandom::u64().expect(RNG_FAILURE_MSG))
+    }
+
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Self::Error> {
+        Ok(getrandom::fill(dest).expect(RNG_FAILURE_MSG))
     }
 }
 
 // Getrandom provides cryptographically secure random numbers
-impl CryptoRng for DefaultRng {}
+impl TryCryptoRng for DefaultRng {}

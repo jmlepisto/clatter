@@ -249,9 +249,10 @@ mod tests {
         assert!(msg != &buf1[..msg.len()]);
 
         // Decrypt should fail
-        assert!(s2
-            .decrypt_and_hash(&buf1[..msg.len() + C::tag_len()], &mut buf2[..msg.len()])
-            .is_err());
+        assert!(
+            s2.decrypt_and_hash(&buf1[..msg.len() + C::tag_len()], &mut buf2[..msg.len()])
+                .is_err()
+        );
 
         // Verify that we panic if no key material is available
         cant_split_without_key::<C, H>();
