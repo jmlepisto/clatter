@@ -106,20 +106,16 @@ Noise uses the protocol name as a basis for the handshake hash and for this reas
 cross-implementation compatibility to have consistent naming schemes for the crypto primitives. For all
 the classical ones Noise spec defines the naming but there is no absolute source for naming the PQ ones.
 
-On top of this, there's also the fact that Kyber KEM was renamed to "ML-KEM" during the selection process
-and some crypto crates still use the term "Kyber" while others have migrated to "ML-KEM". Clatter uses
-whichever name the underlying crate has chosen to use.
-
 Thus Clatter proposes and uses the following naming scheme:
 
 | Primitive     | Protocol Name |
 | ---           | ---           |
-| Kyber 512     | `Kyber512`    |
-| Kyber 768     | `Kyber768`    |
-| Kyber 1024    | `Kyber1024`   |
 | ML-KEM-512    | `MLKEM512`    |
 | ML-KEM-768    | `MLKEM768`    |
 | ML-KEM-1024   | `MLKEM1024`   |
+| HQC-128       | `HQC128`      |
+| HQC-192       | `HQC192`      |
+| HQC-256       | `HQC256`      |
 
 Clatter also includes the possibility to pick different KEMs for ephemeral and static operations. If the
 same KEM is used for both, the name of the KEM is simply placed in the protocol name in place of the DH algorithm.
@@ -127,8 +123,8 @@ same KEM is used for both, the name of the KEM is simply placed in the protocol 
 Examples:
 
 ```text
-Noise_pqNN_Kyber512_ChaChaPoly_BLAKE2s
 Noise_pqNN_MLKEM512_ChaChaPoly_BLAKE2s
+Noise_pqNN_MLKEM1024_ChaChaPoly_BLAKE2s
 ```
 
 If, however, a different KEM is used for ephemeral and static operations, the resulting name will include both
@@ -137,8 +133,8 @@ KEMs joined together with a `+` symbol - ephemeral KEM first.
 Examples:
 
 ```text
-Noise_pqNN_Kyber512+Kyber1024_ChaChaPoly_BLAKE2s
-Noise_pqNN_MLKEM512+Kyber768_ChaChaPoly_BLAKE2s
+Noise_pqNN_MLKEM512+MLKEM1024_ChaChaPoly_BLAKE2s
+Noise_pqNN_MLKEM512+HQC128_ChaChaPoly_BLAKE2s
 ```
 
 ## Clatter hybrid handshakes
