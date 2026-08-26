@@ -128,23 +128,30 @@ where
     }
 }
 
-/// Container for a pair of public keys used by the hybrid handshake
+/// Container for a pair of public keys used by the hybrid handshake.
+///
+/// `kem` is optional because a peer may not have a KEM public key
+/// (e.g. when it encapsulates via `Ekem` instead).
 pub struct HybridPubKeyPair<D, K> {
     dh: D,
-    kem: K,
+    kem: Option<K>,
 }
 
 impl<D, K> HybridPubKeyPair<D, K> {
     pub fn new(dh: D, kem: K) -> HybridPubKeyPair<D, K> {
-        Self { dh, kem }
+        Self { dh, kem: Some(kem) }
+    }
+
+    fn dh_only(dh: D) -> HybridPubKeyPair<D, K> {
+        Self { dh, kem: None }
     }
 
     pub fn dh(&self) -> &D {
         &self.dh
     }
 
-    pub fn kem(&self) -> &K {
-        &self.kem
+    pub fn kem(&self) -> Option<&K> {
+        self.kem.as_ref()
     }
 }
 
@@ -162,6 +169,8 @@ pub type HybridHandshake<DH, EKEM, SKEM, C, H> =
 ///
 /// This handshake type accepts handshake patterns with both DH and KEM operations.
 /// [`Token::E`]/[`Token::S`] will send/receive both DH and KEM ephemeral/static public keys.
+/// When [`Token::Ekem`] precedes [`Token::E`] in the same message, the KEM public key
+/// portion of `E` is omitted since the KEM ephemeral exchange is already complete.
 #[derive(Clone)]
 pub struct HybridHandshakeCore<DH, EKEM, SKEM, C, H, RNG>
 where
@@ -455,15 +464,13 @@ where
         };
 
         let mut cur = 0_usize;
+        let mut ekem_present = false;
         for token in message {
             match *token {
                 Token::E => {
-                    // Generate both DH and KEM ephemeral keys if not present
+                    // Generate DH ephemeral key if not present
                     if self.dh_internals.e.is_none() {
                         self.dh_internals.e = Some(DH::genkey_rng(&mut self.dh_internals.rng)?);
-                    }
-                    if self.kem_e.is_none() {
-                        self.kem_e = Some(EKEM::genkey_rng(&mut self.dh_internals.rng)?);
                     }
 
                     // Send DH public key
@@ -475,18 +482,30 @@ where
                     out[cur..cur + DH::PubKey::len()].copy_from_slice(e_pub.as_slice());
                     cur += DH::PubKey::len();
 
-                    // Send KEM public key
-                    let e_kem_pub = &self.kem_e.as_ref().unwrap().public;
-                    self.dh_internals
-                        .symmetricstate
-                        .mix_hash(e_kem_pub.as_slice());
-                    if self.get_pattern().has_psk() {
+                    // Generate and send KEM public key only when Ekem has not
+                    // already been processed in this message. When ekem_present
+                    // is true the KEM ephemeral exchange is already complete
+                    // and the KEM public key is redundant. Per the token
+                    // ordering convention (see README), if ekem is present in a
+                    // message it always precedes e, so checking ekem_present
+                    // before processing e is sufficient.
+                    if !ekem_present {
+                        if self.kem_e.is_none() {
+                            self.kem_e = Some(EKEM::genkey_rng(&mut self.dh_internals.rng)?);
+                        }
+
+                        let e_kem_pub = &self.kem_e.as_ref().unwrap().public;
                         self.dh_internals
                             .symmetricstate
-                            .mix_key(e_kem_pub.as_slice());
+                            .mix_hash(e_kem_pub.as_slice());
+                        if self.get_pattern().has_psk() {
+                            self.dh_internals
+                                .symmetricstate
+                                .mix_key(e_kem_pub.as_slice());
+                        }
+                        out[cur..cur + EKEM::PubKey::len()].copy_from_slice(e_kem_pub.as_slice());
+                        cur += EKEM::PubKey::len();
                     }
-                    out[cur..cur + EKEM::PubKey::len()].copy_from_slice(e_kem_pub.as_slice());
-                    cur += EKEM::PubKey::len();
 
                     // Sending E satisfies the requirement of applying self-chosen randomness
                     self.dh_internals.own_randomness_applied = true;
@@ -552,6 +571,7 @@ where
                     self.dh_internals.symmetricstate.mix_key(ss.as_slice());
                     out[cur..cur + EKEM::Ct::len()].copy_from_slice(ct.as_slice());
                     cur += EKEM::Ct::len();
+                    ekem_present = true;
 
                     // Sending Ekem satisfies the requirement of applying self-chosen randomness
                     self.dh_internals.own_randomness_applied = true;
@@ -629,6 +649,7 @@ where
             self.dh_internals.initiator_pattern_index += 1;
             p
         };
+        let mut ekem_present = false;
 
         for token in message_pattern {
             match *token {
@@ -641,13 +662,16 @@ where
                     }
                     self.dh_internals.re = Some(re);
 
-                    // Receive KEM public key
-                    let re_kem = EKEM::PubKey::from_slice(get(EKEM::PubKey::len()));
-                    self.dh_internals.symmetricstate.mix_hash(re_kem.as_slice());
-                    if self.get_pattern().has_psk() {
-                        self.dh_internals.symmetricstate.mix_key(re_kem.as_slice());
+                    // Receive KEM public key only when Ekem has not already been
+                    // processed in this message (see write_message_impl comment).
+                    if !ekem_present {
+                        let re_kem = EKEM::PubKey::from_slice(get(EKEM::PubKey::len()));
+                        self.dh_internals.symmetricstate.mix_hash(re_kem.as_slice());
+                        if self.get_pattern().has_psk() {
+                            self.dh_internals.symmetricstate.mix_key(re_kem.as_slice());
+                        }
+                        self.kem_re = Some(re_kem);
                     }
-                    self.kem_re = Some(re_kem);
                 }
                 Token::S => {
                     let has_key = self.dh_internals.symmetricstate.has_key();
@@ -696,6 +720,7 @@ where
                     self.dh_internals.symmetricstate.mix_hash(ct);
                     let ss = EKEM::decapsulate(ct, self.kem_e.as_ref().unwrap().secret.as_slice())?;
                     self.dh_internals.symmetricstate.mix_key(ss.as_slice());
+                    ekem_present = true;
                 }
                 Token::Skem => {
                     let len = if self.dh_internals.symmetricstate.has_key() {
@@ -779,12 +804,17 @@ where
         let mut overhead = 0;
         let mut has_key = self.dh_internals.has_key();
         let has_psk = self.get_pattern().has_psk();
+        let mut ekem_present = false;
 
         for &token in message {
             match token {
                 Token::E => {
                     overhead += DH::PubKey::len();
-                    overhead += EKEM::PubKey::len();
+                    // KEM public key is omitted when Ekem already appeared
+                    // in this message (see write_message_impl comment).
+                    if !ekem_present {
+                        overhead += EKEM::PubKey::len();
+                    }
                     if has_psk {
                         has_key = true;
                     }
@@ -802,6 +832,7 @@ where
                 Token::Ekem => {
                     overhead += EKEM::Ct::len();
                     has_key = true;
+                    ekem_present = true;
                 }
                 Token::Skem => {
                     overhead += SKEM::Ct::len();
@@ -863,10 +894,12 @@ where
     }
 
     fn get_remote_ephemeral(&self) -> Option<Self::E> {
-        match (self.dh_internals.re.as_ref(), self.kem_re.as_ref()) {
-            (Some(dh), Some(kem)) => Some(HybridPubKeyPair::new(dh.clone(), kem.clone())),
-            _ => None,
-        }
+        self.dh_internals.re.as_ref().map(|dh| {
+            match self.kem_re.as_ref() {
+                Some(kem) => HybridPubKeyPair::new(dh.clone(), kem.clone()),
+                None => HybridPubKeyPair::dh_only(dh.clone()),
+            }
+        })
     }
 
     fn get_state(&self) -> SymmetricState<C, H> {

@@ -164,8 +164,12 @@ following the ordering rule stated by PQNoise:
 #### Tokens `e` and `s` handling
 
 Handshake pattern tokens `e` and `s` require special handling for sending/receiving both the DH and KEM public keys.
-Clatter will always place the public DH key first in the message buffer, followed by the public KEM key. All the related
+Except as noted below, Clatter will always place the public DH key first in the message buffer, followed by the public KEM key. All the related
 `mix_hash` and `mix_key` operations are also conducted in the same order.
+
+Exception: If `ekem` precedes `e` in the same message, `e` carries only the DH public key. The KEM public key is
+omitted, since the ephemeral KEM exchange has already been completed by `ekem` using the peer's previously received
+KEM public key. This avoids transmitting an otherwise unused ephemeral KEM public key.
 
 #### Hybrid protocol naming scheme
 
