@@ -1,10 +1,10 @@
 use arrayvec::ArrayVec;
+use clatter::PqHandshake;
 use clatter::bytearray::{ByteArray, SensitiveByteArray};
 use clatter::crypto::cipher::ChaChaPoly;
-use clatter::crypto::kem::rust_crypto_ml_kem::{MlKem1024, MlKem512};
+use clatter::crypto::kem::rust_crypto_ml_kem::{MlKem512, MlKem1024};
 use clatter::handshakepattern::noise_pqnn;
 use clatter::traits::Handshaker;
-use clatter::PqHandshake;
 
 /// **Obvious warning**
 ///

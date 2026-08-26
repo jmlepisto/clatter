@@ -1,3 +1,4 @@
+use core::convert::Infallible;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use clatter::bytearray::ByteArray;
@@ -26,29 +27,27 @@ static RNG_CTR: AtomicU64 = AtomicU64::new(0xdeadbeef);
 #[derive(Default, Clone)]
 struct DummyRng;
 
-impl rand_core::RngCore for DummyRng {
-    fn next_u32(&mut self) -> u32 {
-        RNG_CTR.fetch_add(1, Ordering::Relaxed) as u32
+impl rand_core::TryRng for DummyRng {
+    type Error = Infallible;
+
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+        Ok(RNG_CTR.fetch_add(1, Ordering::Relaxed) as u32)
     }
 
-    fn next_u64(&mut self) -> u64 {
-        RNG_CTR.fetch_add(1, Ordering::Relaxed)
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+        Ok(RNG_CTR.fetch_add(1, Ordering::Relaxed))
     }
 
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Self::Error> {
         for byte in dest {
             *byte = (RNG_CTR.fetch_add(1, Ordering::Relaxed) % 256) as u8;
         }
-    }
-
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
-        self.fill_bytes(dest);
         Ok(())
     }
 }
 
 // Marker trait
-impl rand_core::CryptoRng for DummyRng {}
+impl rand_core::TryCryptoRng for DummyRng {}
 
 #[test]
 fn no_getrandom_smoke_nq_handshakes() {

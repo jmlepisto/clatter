@@ -1,13 +1,13 @@
+use clatter::NqHandshake;
 use clatter::crypto::cipher::ChaChaPoly;
 use clatter::crypto::dh::X25519;
 use clatter::crypto::hash::Sha512;
 use clatter::handshakepattern::noise_xx;
 use clatter::traits::{Dh, Handshaker};
-use clatter::NqHandshake;
 
 fn main() {
-    let mut rng_alice = rand::thread_rng();
-    let mut rng_bob = rand::thread_rng();
+    let mut rng_alice = rand::rng();
+    let mut rng_bob = rand::rng();
 
     // Generate keys
     let alice_s = X25519::genkey_rng(&mut rng_alice).unwrap();

@@ -5,6 +5,7 @@ use core::fmt::Write;
 use arrayvec::{ArrayString, ArrayVec};
 
 use super::HandshakeInternals;
+use crate::KeyPair;
 use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;
 use crate::constants::{MAX_PSKS, PSK_LEN};
@@ -13,7 +14,6 @@ use crate::handshakepattern::{HandshakePattern, HandshakeType, Token};
 use crate::handshakestate::HandshakeStatus;
 use crate::symmetricstate::SymmetricState;
 use crate::traits::{Cipher, Dh, Handshaker, HandshakerInternal, Hash, Kem, Rng};
-use crate::KeyPair;
 
 /// Parameters for initializing a [`HybridHandshake`]
 pub struct HybridHandshakeParams<'a, DH, EKEM, SKEM>
@@ -149,7 +149,7 @@ impl<D, K> HybridPubKeyPair<D, K> {
 }
 
 /// True hybrid (NQ + PQ) Noise handshake
-#[cfg(feature = "getrandom")]
+#[cfg(any(feature = "getrandom", feature = "rand"))]
 pub type HybridHandshake<DH, EKEM, SKEM, C, H> =
     HybridHandshakeCore<DH, EKEM, SKEM, C, H, crate::crypto::rng::DefaultRng>;
 
