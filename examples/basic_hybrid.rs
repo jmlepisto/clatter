@@ -1,7 +1,7 @@
 use clatter::crypto::cipher::ChaChaPoly;
 use clatter::crypto::dh::X25519;
 use clatter::crypto::hash::Sha512;
-use clatter::crypto::kem::rust_crypto_ml_kem::{MlKem1024, MlKem512};
+use clatter::crypto::kem::rust_crypto_ml_kem::{MlKem512, MlKem1024};
 use clatter::handshakepattern::noise_hybrid_nn;
 use clatter::traits::Handshaker;
 use clatter::{HybridHandshake, HybridHandshakeParams};

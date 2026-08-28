@@ -17,7 +17,6 @@ rand = "0.8.5"
 
 [dependencies.clatter]
 path = ".."
-features = ["use-rust-crypto-hqc-kem"]
 
 [[bin]]
 name = "nq_handshake_read"

@@ -1,13 +1,13 @@
 //! ML-KEM implementation by RustCrypto: https://github.com/RustCrypto/KEMs
 
 use ml_kem::kem::{Decapsulate, DecapsulationKey, Encapsulate, EncapsulationKey};
-use ml_kem::{EncodedSizeUser, KemCore, MlKem1024Params, MlKem512Params, MlKem768Params};
+use ml_kem::{EncodedSizeUser, KemCore, MlKem512Params, MlKem768Params, MlKem1024Params};
 use zeroize::Zeroize;
 
+use crate::KeyPair;
 use crate::bytearray::{ByteArray, SensitiveByteArray};
 use crate::error::KemError;
 use crate::traits::{CryptoComponent, Kem, Rng};
-use crate::KeyPair;
 
 /// ML-KEM-512 KEM implementation
 #[derive(Clone)]
@@ -104,7 +104,7 @@ impl_ml_kem!(MlKem1024, MlKem1024Params, 3168, 1568, 1568);
 
 #[cfg(all(test, feature = "getrandom"))]
 mod tests {
-    use super::{MlKem1024, MlKem512, MlKem768};
+    use super::{MlKem512, MlKem768, MlKem1024};
     use crate::bytearray::ByteArray;
     use crate::crypto::rng::DefaultRng;
     use crate::traits::Kem;

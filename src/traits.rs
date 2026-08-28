@@ -4,6 +4,7 @@ use arrayvec::ArrayString;
 pub use rand_core::{CryptoRng, RngCore};
 use zeroize::Zeroize;
 
+use crate::KeyPair;
 use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;
 use crate::constants::{MAX_KEY_LEN, MAX_MESSAGE_LEN, MAX_TAG_LEN};
@@ -12,7 +13,6 @@ use crate::handshakepattern::HandshakePattern;
 use crate::handshakestate::HandshakeStatus;
 use crate::symmetricstate::SymmetricState;
 use crate::transportstate::TransportState;
-use crate::KeyPair;
 
 /// Common trait for all crypto components
 pub trait CryptoComponent: Clone {

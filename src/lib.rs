@@ -238,13 +238,6 @@ pub mod crypto {
         #[cfg(feature = "getrandom")]
         pub use crate::crypto_impl::random::DefaultRng;
     }
-
-    /// ⚠️ Hazmat cryptographic components with unstable or sharp-edge security properties
-    pub mod hazmat {
-        #[cfg_attr(docsrs, doc(cfg(feature = "use-rust-crypto-hqc-kem")))]
-        #[cfg(feature = "use-rust-crypto-hqc-kem")]
-        pub use crate::crypto_impl::rust_crypto_hqc_kem;
-    }
 }
 
 /// A zeroize-on-drop container for keys
