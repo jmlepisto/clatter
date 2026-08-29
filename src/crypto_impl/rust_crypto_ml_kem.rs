@@ -1,13 +1,13 @@
 //! ML-KEM implementation by RustCrypto: https://github.com/RustCrypto/KEMs
 
 use ml_kem::kem::{Decapsulate, DecapsulationKey, Encapsulate, EncapsulationKey};
-use ml_kem::{EncodedSizeUser, KemCore, MlKem1024Params, MlKem512Params, MlKem768Params};
+use ml_kem::{EncodedSizeUser, KemCore, MlKem512Params, MlKem768Params, MlKem1024Params};
 use zeroize::Zeroize;
 
+use crate::KeyPair;
 use crate::bytearray::{ByteArray, SensitiveByteArray};
 use crate::error::KemError;
 use crate::traits::{CryptoComponent, Kem, Rng};
-use crate::KeyPair;
 
 /// ML-KEM-512 KEM implementation
 #[derive(Clone)]
@@ -101,3 +101,28 @@ macro_rules! impl_ml_kem {
 impl_ml_kem!(MlKem512, MlKem512Params, 1632, 800, 768);
 impl_ml_kem!(MlKem768, MlKem768Params, 2400, 1184, 1088);
 impl_ml_kem!(MlKem1024, MlKem1024Params, 3168, 1568, 1568);
+
+#[cfg(all(test, feature = "getrandom"))]
+mod tests {
+    use super::{MlKem512, MlKem768, MlKem1024};
+    use crate::bytearray::ByteArray;
+    use crate::crypto::rng::DefaultRng;
+    use crate::traits::Kem;
+
+    macro_rules! test_roundtrip {
+        ($name:ident, $kem:ty) => {
+            #[test]
+            fn $name() {
+                let mut rng = DefaultRng::default();
+                let kp = <$kem>::genkey_rng(&mut rng).unwrap();
+                let (ct, ss1) = <$kem>::encapsulate(kp.public.as_slice(), &mut rng).unwrap();
+                let ss2 = <$kem>::decapsulate(ct.as_slice(), kp.secret.as_slice()).unwrap();
+                assert_eq!(ss1.as_slice(), ss2.as_slice());
+            }
+        };
+    }
+
+    test_roundtrip!(roundtrip_ml_kem512, MlKem512);
+    test_roundtrip!(roundtrip_ml_kem768, MlKem768);
+    test_roundtrip!(roundtrip_ml_kem1024, MlKem1024);
+}

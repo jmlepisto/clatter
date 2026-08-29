@@ -156,8 +156,6 @@ impl<C: Cipher> CipherState<C> {
 
 #[cfg(test)]
 mod tests {
-    use core::u64;
-
     use super::CipherState;
     use crate::crypto::cipher::{AesGcm, ChaChaPoly};
     use crate::traits::Cipher;
@@ -196,21 +194,23 @@ mod tests {
         // Wrong AD
         c1.encrypt_with_ad(b"Close your eyes", msg, &mut c1_buf[..cipher_len])
             .unwrap();
-        assert!(c2
-            .decrypt_with_ad(
+        assert!(
+            c2.decrypt_with_ad(
                 b"Close your eyes and relax",
                 &c1_buf[..cipher_len],
                 &mut c2_buf[..msg.len()]
             )
-            .is_err());
+            .is_err()
+        );
 
         // Nonce is now desynchronized
         assert!(c1.get_nonce() != c2.get_nonce());
         c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
             .unwrap();
-        assert!(c2
-            .decrypt_with_ad(&[], &c1_buf[..cipher_len], &mut c2_buf[..msg.len()])
-            .is_err());
+        assert!(
+            c2.decrypt_with_ad(&[], &c1_buf[..cipher_len], &mut c2_buf[..msg.len()])
+                .is_err()
+        );
 
         // Restore nonce
         c2.set_nonce(c1.get_nonce());
@@ -224,13 +224,14 @@ mod tests {
         c2.rekey().unwrap();
         c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
             .unwrap();
-        assert!(c2
-            .decrypt_with_ad(
+        assert!(
+            c2.decrypt_with_ad(
                 b"Close your eyes and relax",
                 &c1_buf[..cipher_len],
                 &mut c2_buf[..msg.len()]
             )
-            .is_err());
+            .is_err()
+        );
 
         // Rekey sender (and restore nonce...)
         c1.rekey().unwrap();
@@ -258,12 +259,14 @@ mod tests {
         c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
             .unwrap();
         // This and all following calls should result in an error
-        assert!(c1
-            .encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
-            .is_err());
-        assert!(c1
-            .encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
-            .is_err());
+        assert!(
+            c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
+                .is_err()
+        );
+        assert!(
+            c1.encrypt_with_ad(&[], msg, &mut c1_buf[..cipher_len])
+                .is_err()
+        );
     }
 
     #[test]

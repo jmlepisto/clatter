@@ -1,10 +1,10 @@
+// In no-std environments where getrandom is not supported we must use the lower level XXHandshakeCore structs
+use clatter::NqHandshakeCore;
 use clatter::crypto::cipher::ChaChaPoly;
 use clatter::crypto::dh::X25519;
 use clatter::crypto::hash::Sha512;
 use clatter::handshakepattern::noise_xx;
 use clatter::traits::{Dh, Handshaker};
-// In no-std environments where getrandom is not supported we must use the lower level XXHandshakeCore structs
-use clatter::NqHandshakeCore;
 
 // You'll have to define your own bindings to your platform RNG services if you do not wish to add support for getrandom.
 // Usually this is NOT the smartest way to go, but you should rather consider adding bindings for getrandom, which will handle

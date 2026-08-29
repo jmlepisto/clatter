@@ -1,9 +1,9 @@
+use clatter::NqHandshake;
 use clatter::crypto::cipher::ChaChaPoly;
 use clatter::crypto::dh::X25519;
 use clatter::crypto::hash::Sha512;
 use clatter::handshakepattern::noise_xx;
 use clatter::traits::{Dh, Handshaker};
-use clatter::NqHandshake;
 
 fn main() {
     let mut rng_alice = rand::thread_rng();

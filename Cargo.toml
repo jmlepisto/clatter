@@ -1,8 +1,8 @@
 [package]
 name = "clatter"
-version = "2.2.0"
-edition = "2021"
-rust-version = "1.81.0"
+version = "2.3.0"
+edition = "2024"
+rust-version = "1.85.0"
 license = "MIT"
 description = "no_std compatible implementation of Noise protocol framework with Post-Quantum extensions"
 documentation = "https://docs.rs/clatter"
@@ -37,7 +37,7 @@ default = [
     "use-chacha20poly1305", 
     "use-sha", 
     "use-blake2",
-    "use-25519", 
+    "use-25519",
     "use-pqclean-ml-kem",
     "use-rust-crypto-ml-kem", 
 ]
@@ -45,11 +45,11 @@ default = [
 alloc = []
 std = [
     "alloc",
-    "sha2/std",
-    "blake2/std",
-    "aes-gcm/std",
-    "chacha20poly1305/std",
-    "ml-kem/std",
+    "sha2?/std",
+    "blake2?/std",
+    "aes-gcm?/std",
+    "chacha20poly1305?/std",
+    "ml-kem?/std",
     "zeroize/std",
     "getrandom",
 ]
@@ -69,7 +69,7 @@ use-sha = ["sha2"]
 use-blake2 = ["blake2"]
 use-aes-gcm = ["aes-gcm"]
 use-chacha20poly1305 = ["chacha20poly1305"]
-use-pqclean-ml-kem = ["pqcrypto-mlkem", "pqcrypto-traits", "getrandom"]
+use-pqclean-ml-kem = ["dep:pqcrypto-mlkem", "dep:pqcrypto-traits", "getrandom"]
 use-rust-crypto-ml-kem = ["ml-kem"]
 use-25519 = ["x25519-dalek"]
 

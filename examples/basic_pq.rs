@@ -1,11 +1,9 @@
+use clatter::PqHandshake;
 use clatter::crypto::cipher::ChaChaPoly;
 use clatter::crypto::hash::Sha512;
-use clatter::crypto::kem::pqclean_ml_kem::MlKem1024;
-// We can mix and match KEMs from different vendors
-use clatter::crypto::kem::rust_crypto_ml_kem::MlKem512;
+use clatter::crypto::kem::rust_crypto_ml_kem::{MlKem512, MlKem1024};
 use clatter::handshakepattern::noise_pqnn;
 use clatter::traits::Handshaker;
-use clatter::PqHandshake;
 
 fn main() {
     let mut alice = PqHandshake::<MlKem512, MlKem1024, ChaChaPoly, Sha512>::new(

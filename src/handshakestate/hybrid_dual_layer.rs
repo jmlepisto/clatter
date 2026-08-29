@@ -133,8 +133,8 @@ where
     fn set_error(&mut self) {
         self.inner.set_error();
 
-        if self.outer.is_some() {
-            self.outer.as_mut().unwrap().set_error();
+        if let Some(outer) = self.outer.as_mut() {
+            outer.set_error();
         }
     }
 

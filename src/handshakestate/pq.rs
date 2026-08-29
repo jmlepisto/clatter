@@ -5,6 +5,7 @@ use core::fmt::Write;
 use arrayvec::{ArrayString, ArrayVec};
 
 use super::HandshakeInternals;
+use crate::KeyPair;
 use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;
 use crate::constants::{MAX_PSKS, PSK_LEN};
@@ -13,7 +14,6 @@ use crate::handshakepattern::{HandshakePattern, HandshakeType, Token};
 use crate::handshakestate::HandshakeStatus;
 use crate::symmetricstate::SymmetricState;
 use crate::traits::{Cipher, Handshaker, HandshakerInternal, Hash, Kem, Rng};
-use crate::KeyPair;
 
 /// Post-quantum Noise handshake
 #[cfg(feature = "getrandom")]

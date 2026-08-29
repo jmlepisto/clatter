@@ -257,20 +257,15 @@ impl HandshakePattern {
                         // E or Ekem token applies randomness before any encryption, safe to early return
                         return Ok(());
                     }
-                    Token::Skem => {
-                        if psk_sent {
-                            return Err(PatternError::PskValidityViolation);
-                        } else {
-                            // If Skem comes before PSK, it satisfies the requirement of applying randomness before any encryption
-                            return Ok(());
-                        }
+                    Token::Skem if psk_sent => {
+                        return Err(PatternError::PskValidityViolation);
                     }
-                    Token::S => {
-                        if psk_sent {
-                            return Err(PatternError::PskValidityViolation);
-                        }
-
-                        // S does not apply randomness, continue validation...
+                    Token::Skem => {
+                        // If Skem comes before PSK, it satisfies the requirement of applying randomness before any encryption
+                        return Ok(());
+                    }
+                    Token::S if psk_sent => {
+                        return Err(PatternError::PskValidityViolation);
                     }
                     _ => {}
                 }

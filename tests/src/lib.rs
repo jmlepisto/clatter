@@ -8,6 +8,8 @@ mod smoke;
 #[allow(unused)]
 mod no_getrandom_smoke;
 
+const TEST_MESSAGE_BUF_LEN: usize = clatter::constants::MAX_MESSAGE_LEN;
+
 // Shared handshake pattern arrays for use in both smoke test files
 pub fn nq_handshake_patterns() -> Vec<HandshakePattern> {
     vec![
@@ -118,8 +120,8 @@ pub fn verify_handshake<A: Handshaker<C, H>, B: Handshaker<C, H>, C: Cipher, H: 
     mut alice: A,
     mut bob: B,
 ) {
-    let mut alice_buf = [0u8; 8182];
-    let mut bob_buf = [0u8; 8182];
+    let mut alice_buf = [0u8; TEST_MESSAGE_BUF_LEN];
+    let mut bob_buf = [0u8; TEST_MESSAGE_BUF_LEN];
 
     loop {
         if alice.is_write_turn() && !bob.is_write_turn() {
