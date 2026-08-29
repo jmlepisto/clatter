@@ -68,7 +68,6 @@
 //! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing                    | yes       |                                                                   |
 //! | `use-blake2`              | Enable BLAKE2 hashing                                 | yes       |                                                                   |
 //! | `use-rust-crypto-ml-kem`  | Enable ML-KEM (Kyber) KEMs by RustCrypto              | yes       |                                                                   |
-//! | `use-rust-crypto-hqc-kem` | Enable HQC KEMs by RustCrypto                         | no        | Hazmat only: exposed under [`crypto::hazmat`]                     |
 //! | `use-pqclean-ml-kem`      | Enable deprecated ML-KEM (Kyber) KEMs by PQClean      | yes       | Deprecated: prefer `use-rust-crypto-ml-kem`                       |
 //! | `std`                     | Enable standard library support                       | yes       | Enables `std` for supported dependencies                          |
 //! | `alloc`                   | Enable allocator support                              | yes       | Enables dynamically sized buffer types in [`crate::bytearray`]    |
@@ -76,7 +75,7 @@
 //!
 //! ## Example
 //!
-//! Simplified example with the most straightforward (and insecure) PQ handshake pattern and
+//! Simplified example with the most straightforward PQ handshake pattern and
 //! no handshake payload data at all:
 //!
 //! ```rust
@@ -237,13 +236,6 @@ pub mod crypto {
         #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
         #[cfg(feature = "getrandom")]
         pub use crate::crypto_impl::random::DefaultRng;
-    }
-
-    /// ⚠️ Hazmat cryptographic components with unstable or sharp-edge security properties
-    pub mod hazmat {
-        #[cfg_attr(docsrs, doc(cfg(feature = "use-rust-crypto-hqc-kem")))]
-        #[cfg(feature = "use-rust-crypto-hqc-kem")]
-        pub use crate::crypto_impl::rust_crypto_hqc_kem;
     }
 }
 

@@ -1,11 +1,11 @@
 use core::str;
 
+use clatter::NqHandshake;
 use clatter::crypto::cipher::ChaChaPoly;
 use clatter::crypto::dh::X25519;
 use clatter::crypto::hash::Sha512;
 use clatter::handshakepattern::noise_xx_psk3;
 use clatter::traits::{Dh, Handshaker};
-use clatter::NqHandshake;
 
 /// Pre-shared key (PSK)
 const PSK: &[u8] = b"Trapped inside this Octavarium!!";

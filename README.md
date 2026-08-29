@@ -113,9 +113,6 @@ Thus Clatter proposes and uses the following naming scheme:
 | ML-KEM-512    | `MLKEM512`    |
 | ML-KEM-768    | `MLKEM768`    |
 | ML-KEM-1024   | `MLKEM1024`   |
-| HQC-128       | `HQC128`      |
-| HQC-192       | `HQC192`      |
-| HQC-256       | `HQC256`      |
 
 Clatter also includes the possibility to pick different KEMs for ephemeral and static operations. If the
 same KEM is used for both, the name of the KEM is simply placed in the protocol name in place of the DH algorithm.
@@ -130,11 +127,10 @@ Noise_pqNN_MLKEM1024_ChaChaPoly_BLAKE2s
 If, however, a different KEM is used for ephemeral and static operations, the resulting name will include both
 KEMs joined together with a `+` symbol - ephemeral KEM first.
 
-Examples:
+Example:
 
 ```text
 Noise_pqNN_MLKEM512+MLKEM1024_ChaChaPoly_BLAKE2s
-Noise_pqNN_MLKEM512+HQC128_ChaChaPoly_BLAKE2s
 ```
 
 ## Clatter hybrid handshakes

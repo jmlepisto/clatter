@@ -43,9 +43,11 @@ impl Cipher for AesGcm {
         in_out: &mut [u8],
         plaintext_len: usize,
     ) -> CipherResult<usize> {
-        assert!(plaintext_len
-            .checked_add(Self::tag_len())
-            .is_some_and(|len| len <= in_out.len()));
+        assert!(
+            plaintext_len
+                .checked_add(Self::tag_len())
+                .is_some_and(|len| len <= in_out.len())
+        );
 
         let mut full_nonce = [0u8; 12];
         full_nonce[4..].copy_from_slice(&nonce.to_be_bytes());

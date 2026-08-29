@@ -3,7 +3,6 @@
 use clatter::constants::MAX_MESSAGE_LEN;
 use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
 use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
-use clatter::crypto::hazmat::rust_crypto_hqc_kem::{Hqc128, Hqc256};
 use clatter::crypto::kem::rust_crypto_ml_kem::{MlKem1024, MlKem512};
 use clatter::traits::{Cipher, Hash, Kem};
 use clatter_fuzz::{complete_handshake, pq_handshake_patterns, setup_pq_handshake};
@@ -19,14 +18,6 @@ fuzz_target!(|data: &[u8]| {
     verify_with::<MlKem1024, MlKem512, ChaChaPoly, Sha512>(data);
     verify_with::<MlKem1024, MlKem512, ChaChaPoly, Blake2b>(data);
     verify_with::<MlKem1024, MlKem512, ChaChaPoly, Blake2b>(data);
-    verify_with::<Hqc256, Hqc128, AesGcm, Sha256>(data);
-    verify_with::<Hqc256, Hqc128, AesGcm, Sha512>(data);
-    verify_with::<Hqc256, Hqc128, AesGcm, Blake2b>(data);
-    verify_with::<Hqc256, Hqc128, AesGcm, Blake2s>(data);
-    verify_with::<Hqc256, Hqc128, ChaChaPoly, Sha256>(data);
-    verify_with::<Hqc256, Hqc128, ChaChaPoly, Sha512>(data);
-    verify_with::<Hqc256, Hqc128, ChaChaPoly, Blake2b>(data);
-    verify_with::<Hqc256, Hqc128, ChaChaPoly, Blake2s>(data);
 });
 
 fn verify_with<EKEM: Kem, SKEM: Kem, C: Cipher, H: Hash>(data: &[u8]) {

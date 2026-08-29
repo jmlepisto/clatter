@@ -1,7 +1,6 @@
 use clatter::crypto::cipher::{AesGcm, ChaChaPoly};
 use clatter::crypto::dh::X25519;
 use clatter::crypto::hash::{Blake2b, Blake2s, Sha256, Sha512};
-use clatter::crypto::hazmat::rust_crypto_hqc_kem;
 use clatter::crypto::kem::rust_crypto_ml_kem;
 use clatter::handshakepattern::*;
 use clatter::traits::{Cipher, Dh, Hash, Kem};
@@ -60,15 +59,6 @@ fn smoke_pq_handshakes() {
         cipher_hash_combos::<rust_crypto_ml_kem::MlKem1024, rust_crypto_ml_kem::MlKem1024>(
             pattern.clone(),
         );
-        cipher_hash_combos::<rust_crypto_hqc_kem::Hqc128, rust_crypto_hqc_kem::Hqc128>(
-            pattern.clone(),
-        );
-        cipher_hash_combos::<rust_crypto_hqc_kem::Hqc192, rust_crypto_hqc_kem::Hqc192>(
-            pattern.clone(),
-        );
-        cipher_hash_combos::<rust_crypto_hqc_kem::Hqc256, rust_crypto_hqc_kem::Hqc256>(
-            pattern.clone(),
-        );
     }
 }
 
@@ -96,15 +86,6 @@ fn smoke_hybrid_handshakes() {
             pattern.clone(),
         );
         cipher_hash_combos::<X25519, rust_crypto_ml_kem::MlKem1024, rust_crypto_ml_kem::MlKem1024>(
-            pattern.clone(),
-        );
-        cipher_hash_combos::<X25519, rust_crypto_hqc_kem::Hqc128, rust_crypto_hqc_kem::Hqc128>(
-            pattern.clone(),
-        );
-        cipher_hash_combos::<X25519, rust_crypto_hqc_kem::Hqc192, rust_crypto_hqc_kem::Hqc192>(
-            pattern.clone(),
-        );
-        cipher_hash_combos::<X25519, rust_crypto_hqc_kem::Hqc256, rust_crypto_hqc_kem::Hqc256>(
             pattern.clone(),
         );
     }
@@ -172,18 +153,6 @@ fn smoke_dual_layer_handshakes() {
                 rust_crypto_ml_kem::MlKem1024,
                 X25519,
             >(nq.clone(), pq.clone());
-            cipher_hash_combos::<rust_crypto_hqc_kem::Hqc128, rust_crypto_hqc_kem::Hqc128, X25519>(
-                nq.clone(),
-                pq.clone(),
-            );
-            cipher_hash_combos::<rust_crypto_hqc_kem::Hqc192, rust_crypto_hqc_kem::Hqc192, X25519>(
-                nq.clone(),
-                pq.clone(),
-            );
-            cipher_hash_combos::<rust_crypto_hqc_kem::Hqc256, rust_crypto_hqc_kem::Hqc256, X25519>(
-                nq.clone(),
-                pq.clone(),
-            );
         }
     }
 }

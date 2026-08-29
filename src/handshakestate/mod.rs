@@ -1,6 +1,7 @@
 use arrayvec::ArrayVec;
 use zeroize::Zeroize;
 
+use crate::KeyPair;
 use crate::bytearray::ByteArray;
 use crate::cipherstate::CipherStates;
 use crate::constants::{MAX_PSKS, PSK_LEN};
@@ -8,7 +9,6 @@ use crate::error::{CipherResult, HandshakeError, HandshakeResult, PatternError};
 use crate::handshakepattern::{HandshakePattern, Token};
 use crate::symmetricstate::SymmetricState;
 use crate::traits::{Cipher, Hash, Rng};
-use crate::KeyPair;
 
 pub mod dual_layer;
 pub mod hybrid;
