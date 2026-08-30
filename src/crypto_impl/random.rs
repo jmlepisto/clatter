@@ -19,6 +19,7 @@ pub struct DefaultRng(());
 /// # Panics:
 ///
 /// Due to the nature of `getrandom`, this RNG will panic if the system RNG fails.
+/// On all major systems this is truly exceptional and should never happen in practice.
 #[cfg(all(feature = "getrandom", not(feature = "rand")))]
 #[derive(Default, Clone)]
 pub struct DefaultRng(());
