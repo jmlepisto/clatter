@@ -69,11 +69,9 @@ macro_rules! impl_ml_kem {
                     Err(e) => match e {},
                 };
                 let ek = dk.encapsulation_key();
-                let secret = dk.to_bytes();
-                let public = ek.to_bytes();
                 Ok(KeyPair {
-                    public: Self::PubKey::from_slice(public.as_slice()),
-                    secret: Self::SecretKey::from_slice(secret.as_slice()),
+                    public: Self::PubKey::from_slice(&ek.to_bytes()),
+                    secret: Self::SecretKey::from_slice(&dk.to_bytes()),
                 })
             }
 
