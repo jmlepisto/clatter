@@ -15,6 +15,10 @@ pub struct DefaultRng(());
 /// Default RNG source.
 ///
 /// Uses [`getrandom`] directly when `getrandom` is enabled and `rand` is disabled.
+///
+/// # Panics:
+///
+/// Due to the nature of `getrandom`, this RNG will panic if the system RNG fails.
 #[cfg(all(feature = "getrandom", not(feature = "rand")))]
 #[derive(Default, Clone)]
 pub struct DefaultRng(());
