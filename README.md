@@ -11,13 +11,7 @@ Yawning Angel, Benjamin Dowling, Andreas Hülsing, Peter Schwabe, and Fiona Joha
 Main targets of this crate are **correctness**, extensibility, and strict `no_std` compatibility
 and those come with the small drawback of more verbose user experience with some boilerplate.
 If you don't need PQ functionality and are developing for a regular target, you probably are better
-off using these instead:
-
-* [`snow`](https://github.com/mcginty/snow)
-* [`noise-rust`](https://github.com/blckngm/noise-rust)
-
-Basis of this implementation relies heavily on the abovementioned crates and I'm extending
-huge thanks to the developers for their effort!
+off using [`snow`](https://github.com/mcginty/snow) instead.
 
 ⚠️ **Warning** ⚠️
 
@@ -113,6 +107,9 @@ Thus Clatter proposes and uses the following naming scheme:
 | ML-KEM-512    | `MLKEM512`    |
 | ML-KEM-768    | `MLKEM768`    |
 | ML-KEM-1024   | `MLKEM1024`   |
+| HQC-128       | `HQC128`      |
+| HQC-192       | `HQC192`      |
+| HQC-256       | `HQC256`      |
 
 Clatter also includes the possibility to pick different KEMs for ephemeral and static operations. If the
 same KEM is used for both, the name of the KEM is simply placed in the protocol name in place of the DH algorithm.
@@ -127,10 +124,11 @@ Noise_pqNN_MLKEM1024_ChaChaPoly_BLAKE2s
 If, however, a different KEM is used for ephemeral and static operations, the resulting name will include both
 KEMs joined together with a `+` symbol - ephemeral KEM first.
 
-Example:
+Examples:
 
 ```text
 Noise_pqNN_MLKEM512+MLKEM1024_ChaChaPoly_BLAKE2s
+Noise_pqNN_MLKEM512+HQC128_ChaChaPoly_BLAKE2s
 ```
 
 ## Clatter hybrid handshakes

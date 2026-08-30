@@ -1,7 +1,9 @@
 //! Common traits used throughout the crate
 
+use core::convert::Infallible;
+
 use arrayvec::ArrayString;
-pub use rand_core::{CryptoRng, RngCore};
+pub use rand_core::{CryptoRng, TryCryptoRng, TryRng};
 use zeroize::Zeroize;
 
 use crate::KeyPair;
@@ -23,12 +25,15 @@ pub trait CryptoComponent: Clone {
 /// Common trait for compatible RNG sources
 ///
 /// Automatically implemented for all types that implement:
-/// * [`RngCore`]
-/// * [`CryptoRng`]
-pub trait Rng: RngCore + CryptoRng + Default + Clone {}
+/// * [`TryRng`] with infallible errors
+/// * [`TryCryptoRng`] with infallible errors
+pub trait Rng:
+    TryRng<Error = Infallible> + TryCryptoRng<Error = Infallible> + Default + Clone
+{
+}
 
 /// Automatic implementation for all supported types
-impl<T: RngCore + CryptoRng + Default + Clone> Rng for T {}
+impl<T: TryRng<Error = Infallible> + TryCryptoRng<Error = Infallible> + Default + Clone> Rng for T {}
 
 /// Common trait for all Diffie-Hellman algorithms
 pub trait Dh: CryptoComponent {
@@ -43,9 +48,9 @@ pub trait Dh: CryptoComponent {
     fn genkey_rng<R: Rng>(rng: &mut R) -> DhResult<KeyPair<Self::PubKey, Self::PrivateKey>>;
 
     /// Generate a keypair using the default RNG
-    #[cfg(feature = "getrandom")]
+    #[cfg(any(feature = "getrandom", feature = "rand"))]
     fn genkey() -> DhResult<KeyPair<Self::PubKey, Self::PrivateKey>> {
-        Self::genkey_rng(&mut crate::crypto::rng::DefaultRng)
+        Self::genkey_rng(&mut crate::crypto::rng::DefaultRng::default())
     }
 
     /// Extract public key from given private key
@@ -70,9 +75,9 @@ pub trait Kem: CryptoComponent {
     fn genkey_rng<R: Rng>(rng: &mut R) -> KemResult<KeyPair<Self::PubKey, Self::SecretKey>>;
 
     /// Generate a keypair using the default RNG
-    #[cfg(feature = "getrandom")]
+    #[cfg(any(feature = "getrandom", feature = "rand"))]
     fn genkey() -> KemResult<KeyPair<Self::PubKey, Self::SecretKey>> {
-        Self::genkey_rng(&mut crate::crypto::rng::DefaultRng)
+        Self::genkey_rng(&mut crate::crypto::rng::DefaultRng::default())
     }
 
     /// Encapsulate a public key and return the ciphertext and shared secret

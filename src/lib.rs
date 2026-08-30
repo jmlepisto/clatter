@@ -68,14 +68,15 @@
 //! | `use-sha`                 | Enable SHA-256 and SHA-512 hashing                    | yes       |                                                                   |
 //! | `use-blake2`              | Enable BLAKE2 hashing                                 | yes       |                                                                   |
 //! | `use-rust-crypto-ml-kem`  | Enable ML-KEM (Kyber) KEMs by RustCrypto              | yes       |                                                                   |
-//! | `use-pqclean-ml-kem`      | Enable deprecated ML-KEM (Kyber) KEMs by PQClean      | yes       | Deprecated: prefer `use-rust-crypto-ml-kem`                       |
-//! | `std`                     | Enable standard library support                       | yes       | Enables `std` for supported dependencies                          |
+//! | `use-rust-crypto-hqc-kem` | Enable HQC KEMs by RustCrypto                         | no        | Hazmat only: exposed under [`crypto::hazmat`]                     |
+//! | `std`                     | Enable standard library support                       | yes       | Enables `rand` support and `std` for supported dependencies       |
 //! | `alloc`                   | Enable allocator support                              | yes       | Enables dynamically sized buffer types in [`crate::bytearray`]    |
-//! | `getrandom`               | Enable automatic system RNG support via [`getrandom`] | yes       | Can be used without `std`                                         |
+//! | `rand`                    | Enable default RNG via [`rand`] thread RNG            | yes       | Enabled by `std`                                                  |
+//! | `getrandom`               | Enable default RNG via [`getrandom`]                  | no        | Can be used without `std`                                         |
 //!
 //! ## Example
 //!
-//! Simplified example with the most straightforward PQ handshake pattern and
+//! Simplified example with the most straightforward (and insecure) PQ handshake pattern and
 //! no handshake payload data at all:
 //!
 //! ```rust
@@ -146,12 +147,12 @@
 //! `std` feature is enabled by default. Disable default features and pick only the ones
 //! you require when running on `no_std` targets.
 //!
-//! The only real platform service Clatter requires is the RNG. Clatter includes full
-//! support for the [`getrandom`] crate (via the `getrandom` feature flag) which can be
-//! enabled without `std` features. If your platform is not already supported by
-//! `getrandom`, the most straightforward way to use Clatter is to create `getrandom`
-//! bindings for your custom platform backend. Detailed instructions and examples can be
-//! found in the [`getrandom`] crate documentation.
+//! The only real platform service Clatter requires is the RNG. When the `std` feature is
+//! enabled, Clatter uses [`rand`] crate's thread RNG. When `std` is disabled, Clatter can
+//! use [`getrandom`] crate directly to access the platform's RNG. If your platform is not
+//! already supported by `getrandom`, the most straightforward way to use Clatter is to create
+//! `getrandom` bindings for your custom platform backend. Detailed instructions and examples
+//! can be found in the [`getrandom`] crate documentation.
 //!
 //! If you do not add `getrandom` support, Clatter can still be used. In this case you
 //! are restricted to the lower-level handshake core types, such as [`NqHandshakeCore`]
@@ -180,7 +181,7 @@ pub use handshakestate::pq::PqHandshakeCore;
 pub use rand_core;
 pub use traits::Handshaker;
 use zeroize::{Zeroize, ZeroizeOnDrop};
-#[cfg(feature = "getrandom")]
+#[cfg(any(feature = "getrandom", feature = "rand"))]
 pub use {
     handshakestate::hybrid::HybridHandshake, handshakestate::nq::NqHandshake,
     handshakestate::pq::PqHandshake,
@@ -191,13 +192,6 @@ pub mod crypto {
 
     /// Supported KEMs
     pub mod kem {
-        #[cfg_attr(docsrs, doc(cfg(feature = "use-pqclean-ml-kem")))]
-        #[cfg(feature = "use-pqclean-ml-kem")]
-        #[deprecated(
-            since = "2.3.0",
-            note = "PQClean ML-KEM is deprecated and will be removed in a future release. Prefer the RustCrypto ML-KEM implementation."
-        )]
-        pub use crate::crypto_impl::pqclean_ml_kem;
         #[cfg_attr(docsrs, doc(cfg(feature = "use-rust-crypto-ml-kem")))]
         #[cfg(feature = "use-rust-crypto-ml-kem")]
         pub use crate::crypto_impl::rust_crypto_ml_kem;
@@ -232,9 +226,16 @@ pub mod crypto {
 
     /// Supported default random number generator(s)
     pub mod rng {
-        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
-        #[cfg(feature = "getrandom")]
+        #[cfg_attr(docsrs, doc(cfg(any(feature = "getrandom", feature = "rand"))))]
+        #[cfg(any(feature = "getrandom", feature = "rand"))]
         pub use crate::crypto_impl::random::DefaultRng;
+    }
+
+    /// ⚠️ Hazmat cryptographic components with unstable or sharp-edge security properties
+    pub mod hazmat {
+        #[cfg_attr(docsrs, doc(cfg(feature = "use-rust-crypto-hqc-kem")))]
+        #[cfg(feature = "use-rust-crypto-hqc-kem")]
+        pub use crate::crypto_impl::rust_crypto_hqc_kem;
     }
 }
 

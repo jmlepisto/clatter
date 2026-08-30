@@ -1,7 +1,11 @@
 //! ML-KEM implementation by RustCrypto: https://github.com/RustCrypto/KEMs
 
-use ml_kem::kem::{Decapsulate, DecapsulationKey, Encapsulate, EncapsulationKey};
-use ml_kem::{EncodedSizeUser, KemCore, MlKem512Params, MlKem768Params, MlKem1024Params};
+use ml_kem::kem::{
+    Decapsulate, DecapsulationKey, Encapsulate, EncapsulationKey, Generate, KeyExport,
+};
+use ml_kem::ml_kem_512::MlKem512 as MlKem512Params;
+use ml_kem::ml_kem_768::MlKem768 as MlKem768Params;
+use ml_kem::ml_kem_1024::MlKem1024 as MlKem1024Params;
 use zeroize::Zeroize;
 
 use crate::KeyPair;
@@ -41,9 +45,9 @@ macro_rules! impl_ml_kem {
     ($ml_kem:ty, $params:ty, $sk:expr, $pk:expr, $ct:expr) => {
         impl Kem for $ml_kem {
             #[cfg(feature = "alloc")]
-            type SecretKey = SensitiveByteArray<crate::bytearray::HeapArray<$sk>>;
+            type SecretKey = SensitiveByteArray<crate::bytearray::HeapArray<64>>;
             #[cfg(not(feature = "alloc"))]
-            type SecretKey = SensitiveByteArray<[u8; $sk]>;
+            type SecretKey = SensitiveByteArray<[u8; 64]>;
 
             #[cfg(feature = "alloc")]
             type PubKey = crate::bytearray::HeapArray<$pk>;
@@ -60,10 +64,14 @@ macro_rules! impl_ml_kem {
             fn genkey_rng<R: Rng>(
                 rng: &mut R,
             ) -> crate::error::KemResult<crate::KeyPair<Self::PubKey, Self::SecretKey>> {
-                let (dk, ek) = ml_kem::kem::Kem::<$params>::generate(rng);
+                let dk = match <DecapsulationKey<$params> as Generate>::try_generate_from_rng(rng) {
+                    Ok(dk) => dk,
+                    Err(e) => match e {},
+                };
+                let ek = dk.encapsulation_key();
                 Ok(KeyPair {
-                    public: Self::PubKey::from_slice(&ek.as_bytes()),
-                    secret: Self::SecretKey::from_slice(&dk.as_bytes()),
+                    public: Self::PubKey::from_slice(&ek.to_bytes()),
+                    secret: Self::SecretKey::from_slice(&dk.to_bytes()),
                 })
             }
 
@@ -71,10 +79,10 @@ macro_rules! impl_ml_kem {
                 pk: &[u8],
                 rng: &mut R,
             ) -> crate::error::KemResult<(Self::Ct, Self::Ss)> {
-                let ek = EncapsulationKey::<$params>::from_bytes(
-                    pk.try_into().map_err(|_| KemError::Input)?,
-                );
-                let (ct, mut ss) = ek.encapsulate(rng).map_err(|_| KemError::Encapsulation)?;
+                let pk_arr: [u8; $pk] = pk.try_into().map_err(|_| KemError::Input)?;
+                let ek_key = pk_arr.into();
+                let ek = EncapsulationKey::<$params>::new(&ek_key).map_err(|_| KemError::Input)?;
+                let (ct, mut ss) = ek.encapsulate_with_rng(rng);
                 let res = (
                     ByteArray::from_slice(ct.as_slice()),
                     SensitiveByteArray::from_slice(ss.as_slice()),
@@ -82,16 +90,13 @@ macro_rules! impl_ml_kem {
                 ss.zeroize();
                 Ok(res)
             }
-
             fn decapsulate(ct: &[u8], sk: &[u8]) -> crate::error::KemResult<Self::Ss> {
-                let dk = DecapsulationKey::<$params>::from_bytes(
-                    sk.try_into().map_err(|_| KemError::Input)?,
-                );
-                let ct_arr = ct.try_into().map_err(|_| KemError::Input)?;
+                let dk_seed: [u8; 64] = sk.try_into().map_err(|_| KemError::Input)?;
+                let dk = DecapsulationKey::<$params>::from_seed(dk_seed.into());
+                let ct_bytes: [u8; $ct] = ct.try_into().map_err(|_| KemError::Input)?;
+                let ct_arr: ml_kem::kem::Ciphertext<$params> = ct_bytes.into();
                 Ok(SensitiveByteArray::from_slice(
-                    dk.decapsulate(ct_arr)
-                        .map_err(|_| KemError::Decapsulation)?
-                        .as_slice(),
+                    dk.decapsulate(&ct_arr).as_slice(),
                 ))
             }
         }
@@ -102,7 +107,7 @@ impl_ml_kem!(MlKem512, MlKem512Params, 1632, 800, 768);
 impl_ml_kem!(MlKem768, MlKem768Params, 2400, 1184, 1088);
 impl_ml_kem!(MlKem1024, MlKem1024Params, 3168, 1568, 1568);
 
-#[cfg(all(test, feature = "getrandom"))]
+#[cfg(all(test, any(feature = "getrandom", feature = "rand")))]
 mod tests {
     use super::{MlKem512, MlKem768, MlKem1024};
     use crate::bytearray::ByteArray;

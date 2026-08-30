@@ -16,7 +16,7 @@ use crate::symmetricstate::SymmetricState;
 use crate::traits::{Cipher, Dh, Handshaker, HandshakerInternal, Hash, Rng};
 
 /// Non-post-quantum Noise handshake
-#[cfg(feature = "getrandom")]
+#[cfg(any(feature = "getrandom", feature = "rand"))]
 pub type NqHandshake<DH, C, H> = NqHandshakeCore<DH, C, H, crate::crypto::rng::DefaultRng>;
 
 /// Non-post-quantum Noise handshake core with a generic RNG provider

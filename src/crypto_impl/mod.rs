@@ -7,11 +7,11 @@ pub mod blake2;
 pub mod sha;
 
 // KEMs
-#[cfg(feature = "use-pqclean-ml-kem")]
-pub mod pqclean_ml_kem;
-
 #[cfg(feature = "use-rust-crypto-ml-kem")]
 pub mod rust_crypto_ml_kem;
+
+#[cfg(feature = "use-rust-crypto-hqc-kem")]
+pub mod rust_crypto_hqc_kem;
 
 // Ciphers
 #[cfg(feature = "use-aes-gcm")]
@@ -24,5 +24,5 @@ pub mod chacha;
 pub mod x25519;
 
 // RNGs
-#[cfg(feature = "getrandom")]
+#[cfg(any(feature = "getrandom", feature = "rand"))]
 pub mod random;

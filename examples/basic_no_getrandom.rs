@@ -1,3 +1,5 @@
+use core::convert::Infallible;
+
 // In no-std environments where getrandom is not supported we must use the lower level XXHandshakeCore structs
 use clatter::NqHandshakeCore;
 use clatter::crypto::cipher::ChaChaPoly;
@@ -12,27 +14,25 @@ use clatter::traits::{Dh, Handshaker};
 #[derive(Default, Clone)]
 struct MyRng;
 
-impl rand_core::RngCore for MyRng {
-    fn next_u32(&mut self) -> u32 {
-        return 42; // Replace with true randomness from reliable and secure system RNG
+impl rand_core::TryRng for MyRng {
+    type Error = Infallible;
+
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+        Ok(42) // Replace with true randomness from reliable and secure system RNG
     }
 
-    fn next_u64(&mut self) -> u64 {
-        return 42; // Replace with true randomness from reliable and secure system RNG
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+        Ok(42) // Replace with true randomness from reliable and secure system RNG
     }
 
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
-        dest.fill_with(|| 42); // Replace with true randomness from reliable and secure system RNG
-    }
-
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Self::Error> {
         dest.fill_with(|| 42); // Replace with true randomness from reliable and secure system RNG
         Ok(())
     }
 }
 
 // Marker trait; we promise that MyRng is secure
-impl rand_core::CryptoRng for MyRng {}
+impl rand_core::TryCryptoRng for MyRng {}
 
 fn main() {
     let mut rng_alice = MyRng;

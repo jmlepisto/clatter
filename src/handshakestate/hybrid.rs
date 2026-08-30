@@ -149,7 +149,7 @@ impl<D, K> HybridPubKeyPair<D, K> {
 }
 
 /// True hybrid (NQ + PQ) Noise handshake
-#[cfg(feature = "getrandom")]
+#[cfg(any(feature = "getrandom", feature = "rand"))]
 pub type HybridHandshake<DH, EKEM, SKEM, C, H> =
     HybridHandshakeCore<DH, EKEM, SKEM, C, H, crate::crypto::rng::DefaultRng>;
 

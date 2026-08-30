@@ -6,8 +6,8 @@ use clatter::handshakepattern::noise_xx;
 use clatter::traits::{Dh, Handshaker};
 
 fn main() {
-    let mut rng_alice = rand::thread_rng();
-    let mut rng_bob = rand::thread_rng();
+    let mut rng_alice = rand::rng();
+    let mut rng_bob = rand::rng();
 
     // Generate keys
     let alice_s = X25519::genkey_rng(&mut rng_alice).unwrap();

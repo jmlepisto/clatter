@@ -16,7 +16,7 @@ use crate::symmetricstate::SymmetricState;
 use crate::traits::{Cipher, Handshaker, HandshakerInternal, Hash, Kem, Rng};
 
 /// Post-quantum Noise handshake
-#[cfg(feature = "getrandom")]
+#[cfg(any(feature = "getrandom", feature = "rand"))]
 pub type PqHandshake<EKEM, SKEM, C, H> =
     PqHandshakeCore<EKEM, SKEM, C, H, crate::crypto::rng::DefaultRng>;
 
