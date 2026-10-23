@@ -96,6 +96,14 @@ displaydoc = { version = "0.2.5", default-features = false }
 getrandom = { version = "0.3.3", optional = true }
 rand = { version = "0.10.2", default-features = false, features = ["thread_rng"], optional = true }
 
+[dev-dependencies]
+rand = { version = "0.10.2", default-features = false, features = ["std_rng"] }
+getrandom = "0.3.3"
+
+[[test]]
+name = "prekeyed"
+required-features = ["use-25519", "use-chacha20poly1305", "use-sha"]
+
 [workspace]
 members = [
     "fuzz",

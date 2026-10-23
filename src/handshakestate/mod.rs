@@ -8,7 +8,7 @@ use crate::constants::{MAX_PSKS, PSK_LEN};
 use crate::error::{CipherResult, HandshakeError, HandshakeResult, PatternError};
 use crate::handshakepattern::{HandshakePattern, Token};
 use crate::symmetricstate::SymmetricState;
-use crate::traits::{Cipher, Hash, Rng};
+use crate::traits::{Cipher, Hash};
 
 pub mod dual_layer;
 pub mod hybrid;
@@ -34,7 +34,6 @@ pub(crate) struct HandshakeInternals<C, H, RNG, K, P, EK, EP>
 where
     C: Cipher,
     H: Hash,
-    RNG: Rng,
     K: ByteArray,
     P: ByteArray,
     EK: ByteArray,
@@ -60,7 +59,6 @@ impl<C, H, RNG, K, P, EK, EP> HandshakeInternals<C, H, RNG, K, P, EK, EP>
 where
     C: Cipher,
     H: Hash,
-    RNG: Rng,
     K: ByteArray,
     P: ByteArray,
     EK: ByteArray,

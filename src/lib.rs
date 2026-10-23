@@ -154,10 +154,11 @@
 //! `getrandom` bindings for your custom platform backend. Detailed instructions and examples
 //! can be found in the [`getrandom`] crate documentation.
 //!
-//! If you do not add `getrandom` support, Clatter can still be used. In this case you
-//! are restricted to the lower-level handshake core types, such as [`NqHandshakeCore`]
-//! and [`PqHandshakeCore`] and must implement your own custom RNG provider that implements
-//! the traits defined by [`crate::traits::Rng`].
+//! Without a built-in RNG backend, use [`NqHandshakeCore`] or [`PqHandshakeCore`]
+//! with a custom provider satisfying [`crate::traits::Rng`]. Alternatively,
+//! [`NqHandshakeCore::new_prekeyed`] accepts caller-generated local keys through
+//! [`PreGeneratedKeys`] and stores no RNG. Supply fresh ephemeral keys for every
+//! attempt whose role requires them; see `examples/basic_no_getrandom.rs`.
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -176,7 +177,7 @@ pub mod transportstate;
 pub use handshakestate::dual_layer::DualLayerHandshake;
 pub use handshakestate::hybrid::{HybridHandshakeCore, HybridHandshakeParams};
 pub use handshakestate::hybrid_dual_layer::HybridDualLayerHandshake;
-pub use handshakestate::nq::NqHandshakeCore;
+pub use handshakestate::nq::{NqHandshakeCore, PreGeneratedKeys};
 pub use handshakestate::pq::PqHandshakeCore;
 pub use rand_core;
 pub use traits::Handshaker;

@@ -30,6 +30,12 @@ Clatter provides:
 * [`docs.rs`](https://docs.rs/clatter/latest/clatter/)
 * [`examples/`](examples/)
 
+Classical handshakes can use `NqHandshakeCore::new_prekeyed` with
+`PreGeneratedKeys` to supply caller-generated keys without storing an RNG. Supply
+fresh ephemerals for each role that uses them; see
+[`basic_no_getrandom`](examples/basic_no_getrandom.rs). The existing `new` and
+PQ/KEM contracts are unchanged.
+
 ## Noise Protocol
 
 This crate tracks Noise protocol framework **revision 34**. As of now we omit support for the following features:
